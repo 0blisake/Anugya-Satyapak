@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Anugya Satyapak — Quick Check",
+  "version": "0.1.0",
+  "description": "A user-triggered first-pass check of selected contract text or a webpage.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_title": "Check this page with Anugya Satyapak",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html"
+}

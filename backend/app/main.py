@@ -5,19 +5,30 @@ import json
 import os
 import re
 import uuid
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env")
+
+from app.ai_review import ai_configuration, analyze_with_ai
+
 MAX_FILE_BYTES = 12 * 1024 * 1024
+MAX_BATCH_BYTES = 30 * 1024 * 1024
+MAX_BATCH_FILES = 10
+MAX_TEXT_CHARS = 250_000
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+SUPPORTED_SUFFIXES = IMAGE_SUFFIXES | {".pdf", ".txt", ".md"}
 
 app = FastAPI(
     title="Anugya Satyapak prototype API",
-    version="0.1.0",
-    description="A transparent, pattern-based contract scan for the Anugya Satyapak hackathon prototype.",
+    version="0.2.0",
+    description="A cautious contract-review prototype with evidence-validated AI and rule-based modes.",
 )
 allowed_origins = [
     origin.strip()
@@ -137,7 +148,58 @@ def scan_text(text: str) -> list[dict[str, Any]]:
     return findings
 
 
-def extract_pdf(raw: bytes) -> tuple[str, bool]:
+@lru_cache(maxsize=1)
+def ocr_runtime_status() -> dict[str, Any]:
+    """Report OCR readiness without exposing local executable paths."""
+    try:
+        import pytesseract
+    except ImportError:
+        return {"available": False, "message": "The Python OCR package is not installed."}
+
+    try:
+        pytesseract.get_tesseract_version()
+    except pytesseract.TesseractNotFoundError:
+        return {"available": False, "message": "The Tesseract OCR application is not installed or is not available on the API server's PATH."}
+    except Exception:
+        return {"available": False, "message": "Tesseract is installed but could not be started by the API."}
+
+    try:
+        if "eng" not in pytesseract.get_languages(config=""):
+            return {"available": False, "message": "Tesseract is installed, but its English language data is missing on the API server."}
+    except Exception:
+        return {"available": False, "message": "Tesseract is installed, but its language data could not be checked by the API."}
+
+    try:
+        from PIL import Image  # noqa: F401
+    except ImportError:
+        return {"available": False, "message": "Pillow, required to prepare images for OCR, is not installed."}
+
+    return {"available": True, "message": "OCR is ready for English text."}
+
+
+def ocr_image(image: Any) -> str:
+    status = ocr_runtime_status()
+    if not status["available"]:
+        raise HTTPException(status_code=503, detail=status["message"])
+
+    import pytesseract
+
+    try:
+        return pytesseract.image_to_string(image, lang="eng").strip()
+    except pytesseract.TesseractError as exc:
+        message = str(exc).lower()
+        if "error opening data file" in message or "failed loading language" in message:
+            raise HTTPException(status_code=503, detail="Tesseract is available, but its English language data is missing on the API server.") from exc
+        raise HTTPException(status_code=422, detail="Tesseract could not read this image. Try a clearer, upright image or correct the extracted text manually.") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="OCR failed while reading this image. Try a clearer, upright image or correct the extracted text manually.") from exc
+
+
+def format_pdf_pages(pages: list[str]) -> str:
+    return "\n\n".join(f"[Page {number}]\n{text}" for number, text in enumerate(pages, start=1)).strip()
+
+
+def extract_pdf(raw: bytes) -> tuple[str, bool, int, list[str]]:
     try:
         import fitz
     except ImportError as exc:
@@ -149,104 +211,253 @@ def extract_pdf(raw: bytes) -> tuple[str, bool]:
         raise HTTPException(status_code=422, detail="This PDF could not be opened. Try a different copy or paste its text.") from exc
 
     pages: list[str] = []
+    warnings: list[str] = []
     used_ocr = False
     for page_index, page in enumerate(document, start=1):
         page_text = page.get_text("text").strip()
         if len(page_text) < 35:
-            try:
-                import pytesseract
-                from PIL import Image
-            except ImportError as exc:
-                raise HTTPException(status_code=503, detail="This looks like a scanned PDF. Install the backend requirements and Tesseract OCR, or paste the text instead.") from exc
+            ocr_status = ocr_runtime_status()
+            if not ocr_status["available"]:
+                if page_text:
+                    warnings.append(f"Page {page_index} has little selectable text. OCR could not check the rest of this page: {ocr_status['message']}")
+                    pages.append(page_text)
+                    continue
+                document.close()
+                raise HTTPException(status_code=503, detail=f"Page {page_index} appears to need OCR, but OCR is unavailable: {ocr_status['message']}")
             try:
                 pixmap = page.get_pixmap(dpi=180, alpha=False)
-                image = Image.open(io.BytesIO(pixmap.tobytes("png")))
-                page_text = pytesseract.image_to_string(image, lang="eng").strip()
-                used_ocr = True
             except Exception as exc:
-                raise HTTPException(status_code=422, detail=f"OCR could not read page {page_index}. Try a clearer scan or paste the text.") from exc
-        pages.append(f"[Page {page_index}]\n{page_text}" if page_text else f"[Page {page_index}]\n")
+                document.close()
+                raise HTTPException(status_code=422, detail=f"Page {page_index} could not be rendered for OCR. Try another PDF copy.") from exc
+
+            try:
+                from PIL import Image, ImageOps
+            except ImportError as exc:
+                document.close()
+                raise HTTPException(status_code=503, detail="Scanned PDF OCR requires Pillow. Install the backend requirements and restart the API.") from exc
+
+            try:
+                with Image.open(io.BytesIO(pixmap.tobytes("png"))) as image:
+                    page_text = ocr_image(ImageOps.exif_transpose(image).convert("RGB"))
+                used_ocr = True
+                if len(page_text) < 40:
+                    warnings.append(f"Page {page_index} produced very little OCR text. Check and correct this page before reviewing it.")
+            except HTTPException as exc:
+                document.close()
+                raise HTTPException(status_code=exc.status_code, detail=f"Page {page_index}: {exc.detail}") from exc
+            except Exception as exc:
+                document.close()
+                raise HTTPException(status_code=422, detail=f"Page {page_index} could not be rendered for OCR. Try another PDF copy.") from exc
+        if not page_text:
+            warnings.append(f"No readable text was found on page {page_index}.")
+        pages.append(page_text)
     document.close()
-    return "\n\n".join(pages).strip(), used_ocr
+    if not any(pages):
+        raise HTTPException(status_code=422, detail="No readable text was found in this PDF. It may be blank, image-only, or too unclear to extract.")
+    return format_pdf_pages(pages), used_ocr, len(pages), warnings
 
 
-def extract_image(raw: bytes) -> str:
+def extract_image(raw: bytes) -> tuple[str, list[str]]:
     try:
-        import pytesseract
-        from PIL import Image
-    except ImportError as exc:
-        raise HTTPException(status_code=503, detail="Image OCR is unavailable. Install the backend requirements and Tesseract OCR, or paste the text instead.") from exc
-    try:
-        image = Image.open(io.BytesIO(raw)).convert("RGB")
-        text = pytesseract.image_to_string(image, lang="eng").strip()
+        from PIL import Image, ImageOps
     except Exception as exc:
-        raise HTTPException(status_code=422, detail="This image could not be read. Try a clearer photo or paste the text.") from exc
-    if len(text) < 20:
-        raise HTTPException(status_code=422, detail="Very little text was detected in this photo. Try a sharper image or paste the text.")
-    return text
+        raise HTTPException(status_code=503, detail="Image preparation is unavailable. Install the backend image/OCR requirements and restart the API.") from exc
+
+    try:
+        with Image.open(io.BytesIO(raw)) as image:
+            prepared = ImageOps.exif_transpose(image).convert("RGB")
+            text = ocr_image(prepared)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="This image could not be opened. Try a clear PNG, JPG, or WEBP image in the correct orientation.") from exc
+    if not text:
+        raise HTTPException(status_code=422, detail="No readable text was detected in this image. Try a sharper, well-lit image or enter the text manually.")
+    warnings = []
+    if len(text) < 40:
+        warnings.append("This image produced very little OCR text. Check and correct the extracted text before reviewing it.")
+    return text, warnings
 
 
-async def get_contract_text(text: str | None, file: UploadFile | None) -> tuple[str, str, str | None]:
-    if file is None:
-        content = (text or "").strip()
-        if not content:
-            raise HTTPException(status_code=422, detail="Add contract text or choose a file to review.")
-        if len(content) > 80_000:
-            raise HTTPException(status_code=413, detail="Pasted text must be 80,000 characters or fewer.")
-        return content, "Pasted contract text", None
+def safe_filename(upload: UploadFile) -> str:
+    return Path((upload.filename or "contract").replace("\\", "/")).name or "contract"
 
-    raw = await file.read(MAX_FILE_BYTES + 1)
-    if len(raw) > MAX_FILE_BYTES:
-        raise HTTPException(status_code=413, detail="Files must be 12 MB or smaller.")
-    filename = Path(file.filename or "contract").name
-    suffix = Path(filename).suffix.lower()
-    warning: str | None = None
-    if suffix in {".txt", ".md"}:
+
+def resolve_uploads(file: UploadFile | None, files: list[UploadFile] | None) -> list[UploadFile]:
+    if file is not None and files:
+        raise HTTPException(status_code=422, detail="Send either the legacy single-file field or the multiple-files field, not both.")
+    uploads = files or ([file] if file is not None else [])
+    if not uploads:
+        raise HTTPException(status_code=422, detail="Choose a PDF, image, or text file to extract.")
+    if len(uploads) > MAX_BATCH_FILES:
+        raise HTTPException(status_code=413, detail=f"Choose {MAX_BATCH_FILES} files or fewer in one batch.")
+    if len(uploads) > 1 and not all(Path(safe_filename(upload)).suffix.lower() in IMAGE_SUFFIXES for upload in uploads):
+        raise HTTPException(status_code=415, detail="A multi-file batch must contain screenshots only. Upload a PDF or text document by itself.")
+    return uploads
+
+
+async def extract_uploads(uploads: list[UploadFile]) -> dict[str, Any]:
+    extracted_parts: list[str] = []
+    warnings: list[str] = []
+    source_files: list[str] = []
+    total_bytes = 0
+    next_page = 1
+
+    for upload in uploads:
+        filename = safe_filename(upload)
+        source_files.append(filename)
+        suffix = Path(filename).suffix.lower()
+        if suffix not in SUPPORTED_SUFFIXES:
+            raise HTTPException(status_code=415, detail=f"{filename}: use PDF, PNG, JPG, WEBP, TXT, or MD.")
+
+        raw = await upload.read(MAX_FILE_BYTES + 1)
+        if len(raw) > MAX_FILE_BYTES:
+            raise HTTPException(status_code=413, detail=f"{filename}: files must be 12 MB or smaller.")
+        total_bytes += len(raw)
+        if total_bytes > MAX_BATCH_BYTES:
+            raise HTTPException(status_code=413, detail="The selected files total more than 30 MB. Remove some files or choose smaller images.")
+        if not raw:
+            raise HTTPException(status_code=422, detail=f"{filename}: the file is empty.")
+
         try:
-            content = raw.decode("utf-8-sig").strip()
-        except UnicodeDecodeError as exc:
-            raise HTTPException(status_code=422, detail="This text file is not UTF-8 encoded. Save it as UTF-8 or paste the text.") from exc
-    elif suffix == ".pdf":
-        content, used_ocr = extract_pdf(raw)
-        if used_ocr:
-            warning = "Some pages were read with OCR. Check the quoted text against the original scan."
-    elif suffix in {".png", ".jpg", ".jpeg", ".webp"}:
-        content = extract_image(raw)
-        warning = "This image was read with OCR. Check the quoted text against the original photo."
+            if suffix in {".txt", ".md"}:
+                try:
+                    content = raw.decode("utf-8-sig").strip()
+                except UnicodeDecodeError as exc:
+                    raise HTTPException(status_code=422, detail="This text file is not UTF-8 encoded. Save it as UTF-8 or paste the text.") from exc
+                page_count = 1
+                file_warnings: list[str] = []
+            elif suffix == ".pdf":
+                content, used_ocr, page_count, file_warnings = extract_pdf(raw)
+                if used_ocr:
+                    file_warnings.insert(0, "One or more PDF pages were read with OCR. Check the extracted text against the original pages.")
+            else:
+                content, file_warnings = extract_image(raw)
+                page_count = 1
+                content = f"[Page {next_page}]\n{content}"
+                next_page += 1
+
+            if not content.strip():
+                raise HTTPException(status_code=422, detail="No readable text was found in this file.")
+            extracted_parts.append(content)
+            warnings.extend(f"{filename}: {warning}" for warning in file_warnings)
+            if suffix == ".pdf":
+                next_page += page_count
+        except HTTPException as exc:
+            detail = str(exc.detail)
+            if detail.startswith(f"{filename}:"):
+                raise
+            raise HTTPException(status_code=exc.status_code, detail=f"{filename}: {detail}") from exc
+
+    extracted_text = "\n\n".join(part for part in extracted_parts if part.strip()).strip()
+    if not extracted_text:
+        raise HTTPException(status_code=422, detail="No readable text was extracted from the selected files.")
+    if len(extracted_text) > MAX_TEXT_CHARS:
+        raise HTTPException(status_code=413, detail=f"The extracted text is longer than {MAX_TEXT_CHARS:,} characters. Split the contract into smaller parts.")
+
+    if len(source_files) == 1:
+        document_name = source_files[0]
     else:
-        raise HTTPException(status_code=415, detail="Use a PDF, PNG, JPG, WEBP, TXT, or MD file.")
+        document_name = f"{len(source_files)} screenshots"
+    return {
+        "document_name": document_name,
+        "source_files": source_files,
+        "extracted_text": extracted_text,
+        "page_count": next_page - 1,
+        "warnings": warnings,
+    }
+
+
+async def get_analysis_input(
+    text: str | None,
+    document_name: str | None,
+    file: UploadFile | None,
+    files: list[UploadFile] | None,
+) -> tuple[str, str, str | None]:
+    uploads = resolve_uploads(file, files) if file is not None or files else []
+    content = (text or "").strip()
+    if content and uploads:
+        raise HTTPException(status_code=422, detail="Send pasted/extracted text or file uploads, not both in the same request.")
+    if uploads:
+        result = await extract_uploads(uploads)
+        warning = " ".join(result["warnings"]) or None
+        return result["extracted_text"], result["document_name"], warning
     if not content:
-        raise HTTPException(status_code=422, detail="No readable text was found. Try a clearer scan or paste the text.")
-    return content, filename, warning
+        raise HTTPException(status_code=422, detail="Add contract text or choose a file to review.")
+    if len(content) > MAX_TEXT_CHARS:
+        raise HTTPException(status_code=413, detail=f"Text must be {MAX_TEXT_CHARS:,} characters or fewer.")
+    return content, (document_name or "Pasted contract text").strip() or "Pasted contract text", None
 
 
 @app.get("/api/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "rules-prototype"}
+def health() -> dict[str, Any]:
+    ocr = ocr_runtime_status()
+    ai = ai_configuration()
+    return {
+        "status": "ok",
+        "mode": "ai-assisted-prototype" if ai["available"] else "rules-prototype",
+        "ai_available": ai["available"],
+        "ai_message": ai["message"],
+        "ocr_available": ocr["available"],
+        "ocr_message": ocr["message"],
+        "limits": {
+            "file_bytes": MAX_FILE_BYTES,
+            "batch_bytes": MAX_BATCH_BYTES,
+            "batch_files": MAX_BATCH_FILES,
+            "text_characters": MAX_TEXT_CHARS,
+        },
+    }
+
+
+@app.post("/api/extract")
+async def extract(
+    file: UploadFile | None = File(default=None),
+    files: list[UploadFile] | None = File(default=None),
+) -> dict[str, Any]:
+    uploads = resolve_uploads(file, files)
+    return await extract_uploads(uploads)
 
 
 @app.post("/api/analyze")
 async def analyze(
     text: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
+    files: list[UploadFile] | None = File(default=None),
+    document_name: str | None = Form(default=None),
     jurisdiction: str = Form(default="India · Central"),
     language: str = Form(default="English"),
+    ai_consent: bool = Form(default=False),
 ) -> dict[str, Any]:
-    contract_text, document_name, extraction_warning = await get_contract_text(text, file)
-    findings = scan_text(contract_text)
-    citations_by_id = {citation["id"]: citation for finding in findings for citation in finding["citations"]}
-    if findings:
-        summary = f"This pattern-based scan surfaced {len(findings)} passage(s) across {len({item['category'] for item in findings})} categories for a closer read. It does not determine whether a term is fair, enforceable, or unlawful."
+    contract_text, resolved_document_name, extraction_warning = await get_analysis_input(text, document_name, file, files)
+    ai = ai_configuration()
+    if ai["available"]:
+        if not ai_consent:
+            raise HTTPException(status_code=422, detail="Confirm the AI processing notice before starting this review.")
+        ai_result = await analyze_with_ai(contract_text, jurisdiction, language, SOURCES)
+        findings = ai_result["findings"]
+        summary = ai_result["contract_summary"]
+        citations = ai_result["citations"]
+        analysis_mode = ai_result["analysis_mode"]
+        analysis_warning = ai_result["analysis_warning"]
     else:
-        summary = "This prototype scan did not find wording that matches its current patterns. That does not confirm the contract has no important or legally relevant terms."
+        findings = scan_text(contract_text)
+        citations_by_id = {citation["id"]: citation for finding in findings for citation in finding["citations"]}
+        if findings:
+            summary = f"This pattern-based scan surfaced {len(findings)} passage(s) across {len({item['category'] for item in findings})} categories for a closer read. It does not determine whether a term is fair, enforceable, or unlawful."
+        else:
+            summary = "This prototype scan did not find wording that matches its current patterns. That does not confirm the contract has no important or legally relevant terms."
+        citations = list(citations_by_id.values())
+        analysis_mode = "rules-prototype"
+        analysis_warning = None
     return {
         "report_id": str(uuid.uuid4()),
-        "document_name": document_name,
+        "document_name": resolved_document_name,
         "jurisdiction": jurisdiction,
         "language": language,
-        "analysis_mode": "backend",
+        "analysis_mode": analysis_mode,
         "contract_summary": summary,
         "findings": findings,
-        "citations": list(citations_by_id.values()),
+        "citations": citations,
         "extraction_warning": extraction_warning,
+        "analysis_warning": analysis_warning,
     }

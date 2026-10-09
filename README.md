@@ -4,13 +4,18 @@ Anugya Satyapak is a hackathon prototype for helping Indian consumers notice imp
 
 ## Current status
 
-This folder contains the first working project scaffold and interface.
+This folder contains the Anugya Satyapak prototype, including Phase 1 intake reliability, the Phase 2 evidence-checked AI review path, and the Phase 3 visual refresh.
 
 - The sample report demonstrates the intended consumer-facing report, separate citations, and downloadable output. It is fictional.
 - Pasted text can be scanned in the browser with a small set of transparent keyword patterns.
-- The FastAPI service can extract text from TXT/MD files and digital PDFs. It uses Tesseract OCR for photos and scanned PDF pages when the local OCR dependency is installed.
-- The live scan is rule-based. It is **not connected to an LLM** and does not decide whether a clause is unfair, enforceable, or unlawful.
-- Hindi UI translations and the sample report are included. Live findings remain in English until a reviewed translation service is connected.
+- The FastAPI service can extract text from TXT/MD files and digital PDFs. It can process up to 10 screenshots in a selected/reordered page sequence. It uses Tesseract OCR for photos and scanned PDF pages when the API host has the Python dependencies, Tesseract application, and English language data installed.
+- File uploads now have a separate extraction step. The site shows the extracted text, page count, source filenames, and OCR warnings so a user can correct OCR text before requesting a report.
+- When `OPENAI_API_KEY` and `OPENAI_MODEL` are configured on the backend, the review uses the OpenAI Responses API. Otherwise, the existing transparent rule scan remains active. Neither mode decides whether a clause is unlawful, fair, or enforceable.
+- The AI review works in overlapping document chunks, runs a separate coverage pass, checks each evidence quote against the supplied text, and only attaches citation details from the backend's approved source records. Rejected/unverifiable suggestions are omitted with a report warning. A configured AI review uses up to two model requests per chunk plus one summary request when findings are accepted, so API usage and response time grow with document length.
+- The AI prompt requests English or Hindi explanation text based on the selected UI language. Original contract quotes are retained verbatim, and category names/source records remain canonical labels.
+- `backend/examples/phase2_evaluation.json` contains synthetic positive, control, and edge-case examples for future manual quality review. It contains no beta-tester contracts and is not run automatically.
+- The Phase 3 theme uses the agreed navy, blue, cream, and lime palette; increases interface/report text size; and keeps the upload and report layouts responsive. `frontend/public/brand/` is ready for approved logo artwork; the existing inline mark remains the fallback.
+- Final verification: the frontend TypeScript check and production build passed; its local preview and sample report rendered without browser console errors; the 390 px mobile preview had no horizontal overflow. Python backend files compile, and the extension JavaScript/manifest pass syntax checks. A live API check could not run because this environment could not install the backend dependencies; a Chrome runtime check could not run because no Chrome browser surface is available in this session. See the Phase 4 record for the remaining owner-side checks.
 - Lawyer referrals and team contact details are placeholders and need real, verified destinations before a public demo.
 
 ## Run locally
@@ -24,10 +29,16 @@ cd backend
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+notepad .env
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-The API is available at `http://127.0.0.1:8000`. For photo OCR and scanned PDFs, install the Tesseract OCR application and make sure `tesseract.exe` is on `PATH` before starting the API. Digital PDFs and text files do not need OCR.
+In `backend/.env`, add your own `OPENAI_API_KEY`; the example uses `gpt-6-astra` as the starting model. Change `OPENAI_MODEL` to a model available to your API account if needed. This feature can create API usage charges; check your account's model access, budget, and usage limits before enabling it. Restart the API after changing `.env`. Keep this file private; `.gitignore` excludes it. If the API key/model is absent, the health endpoint reports that AI is not configured and the site stays in rules mode.
+
+Create an OpenAI API key through the [official API quickstart](https://developers.openai.com/api/docs/quickstart). Use it only on the backend; never put it in a `VITE_*` variable, frontend file, browser extension, or GitHub Pages setting. API access and model availability depend on the OpenAI API account.
+
+The API is available at `http://127.0.0.1:8000`. For photo OCR and scanned PDFs, install the Tesseract OCR application, its English (`eng`) language data, and make sure `tesseract.exe` is on `PATH` before starting the API. Text files and PDFs with selectable text can be extracted without OCR; image-only or scanned PDF pages need it. `GET /api/health` reports whether OCR and AI are ready and gives a setup diagnosis when they are not.
 
 ### Frontend
 
@@ -44,6 +55,16 @@ npm.cmd run dev
 In PowerShell, use `npm.cmd` if `npm` produces an execution-policy error for `npm.ps1`. This calls the Windows command wrapper and does not require changing PowerShell's execution policy. You can also run `npm install` and `npm run dev` from Command Prompt.
 
 Open the local URL printed by Vite (normally `http://localhost:5173`). The Vite development server forwards `/api` requests to the local FastAPI service. Without the backend, pasted text still uses the browser-based pattern scan and the fictional sample report remains available.
+
+### Chrome extension
+
+1. Start the backend as described above.
+2. In desktop Chrome, open `chrome://extensions`, turn on **Developer mode**, select **Load unpacked**, and choose this repository's `extension/` folder.
+3. Open the extension's settings and leave the API origin as `http://127.0.0.1:8000` for local work. For a hosted backend, enter its HTTPS origin. Select **Save and allow this API** and approve the origin-specific permission request.
+4. Optionally set the URL of the deployed full-review website. The extension does not transfer its captured text to that site.
+5. Open Quick Check on a webpage, choose selected text or rendered page text, review/edit it, acknowledge the send notice, and submit. You can also paste text. The quick-review limit is 40,000 characters.
+
+See [extension setup and limits](extension/README.md) for permission details and browser restrictions. Chrome grants temporary active-tab access when the user invokes the extension; access to the configured API origin is requested separately as an optional host permission. [Chrome activeTab guide](https://developer.chrome.com/docs/extensions/develop/concepts/activeTab), [optional permission guide](https://developer.chrome.com/docs/extensions/reference/api/permissions).
 
 ## 5. Send the project to GitHub
 
@@ -114,29 +135,46 @@ anugya-satyapak/
     src/App.tsx              Upload, sample report, review UI, and report download
     src/mockReport.ts        Fictional sample contract findings
     src/styles.css           Responsive styling and print layout
+    src/brand-theme.css      Brand palette, typography, and visual refresh
+    public/brand/            Approved logo assets and placement guidance
+  extension/                Chrome Manifest V3 quick-review prototype
+    manifest.json            Toolbar popup and scoped permissions
+    popup.js                 Capture and compact report flow
+    options.js               API and full-site URL settings
   backend/
-    app/main.py              FastAPI extraction and pattern-scan endpoints
+    app/main.py              FastAPI extraction and review endpoints
+    app/ai_review.py         OpenAI adapter and evidence-checked review pipeline
     data/legal_sources.json  Small reviewed-source seed for prototype matching
     requirements.txt         Python dependencies
 ```
 
 ## Report behavior
 
-The frontend calls `POST /api/analyze` with either pasted text or one uploaded file. The API accepts PDF, image, TXT, or MD input and returns the structured report consumed by the UI. `GET /api/health` reports whether the API is running.
+The frontend calls `POST /api/extract` with one PDF, image, TXT, or MD file, or with multiple screenshots under the repeated `files` field. The response includes extracted text, source filenames, page count, and warnings. For a screenshot batch, the API processes images in the order sent by the browser. The user can inspect and edit that text before the site calls `POST /api/analyze` with the corrected text and document name. When AI is configured, the UI and API both require explicit acknowledgement that corrected text will be sent to the backend and OpenAI. The analysis endpoint still accepts the previous single-file `file` field for compatibility, as well as the multiple-file field. `GET /api/health` reports API, OCR, and AI readiness plus the configured upload limits.
 
-The report preserves quoted contract wording, flags pattern matches, and includes a citation only for the narrow fee/penalty patterns connected to the prototype source list. A source match is a possible reference point, not a legal conclusion. No matching clause or citation does not establish that the contract is safe or that no law applies.
+Upload limits for this prototype are 10 files per batch, 12 MB per file, 30 MB total, and 250,000 extracted/pasted characters. Multiple-file batches must contain screenshots only; upload a PDF or text file by itself. If one screenshot fails, the batch reports the affected filename and the user can remove or replace that image and retry. Text/TXT/MD input can still be reviewed in browser demo mode; PDF and photo extraction need the API.
+
+In rules mode, the report preserves passages matched by the current patterns. In AI mode, the model proposes findings, but the API keeps only findings whose exact quote occurs in the supplied document chunk. The API derives page references from page markers and attaches canonical citation data only when the model selected a known source ID. Quotes that fail exact-text validation are omitted, and the report says when suggestions were discarded. Neither no findings nor no citation establishes that a contract is safe or that no law applies.
 
 ## Data and privacy notes
 
-The prototype does not save contracts to a database. The backend reads each upload into memory for extraction and analysis; request contents are not written to logs by this app. Avoid using sensitive real contracts in a public demo. Review the hosting provider’s request logging and retention settings before deployment.
+The app does not save contracts to its own database. The backend reads uploads in memory for extraction and analysis, and the OpenAI request sets `store` to `false`. The corrected contract text is still transmitted to OpenAI when AI mode is enabled, under the configured API account; this setting is not a promise about all provider processing or retention. Review the API account terms and the hosting provider's logging/retention settings. Use fictional or non-confidential documents for a public demo until that review is complete.
 
 ## Before a public or judge-facing deployment
 
 1. Have a legal reviewer validate the source list, section matches, and sample findings.
-2. Connect an LLM only behind the API and validate its responses against the report schema. Keep source retrieval deterministic and do not accept model-invented citations.
+2. Review the OpenAI account, model access, data-handling terms, usage limits, and deployment secrets. Keep source retrieval deterministic and do not accept model-invented citations.
 3. Add OCR language selection, document cleanup, and extraction-confidence feedback.
 4. Add reviewed Hindi translations for live results.
 5. Replace contact and lawyer-referral placeholders with verified options.
-6. Add rate limits, file scanning, deployment secrets, and a clear disclosure of any external AI processing.
+6. Add rate limits, file scanning, deployment secrets, and a clear disclosure of external AI processing. Configure `OPENAI_API_KEY` and `OPENAI_MODEL` only as private API-host secrets.
 
 The broader statutory crawler, PostgreSQL/vector search, state-amendment coverage, and criminal-code mapping are intentionally deferred until the core consumer-contract flow is validated.
+
+## Phase records
+
+- [Phase 0: scope and architecture](../ANUGYA-SATYAPAK-PHASE-0-SCOPE.md)
+- [Phase 1: intake and extraction reliability](../ANUGYA-SATYAPAK-PHASE-1-INTAKE.md)
+- [Phase 2: AI review pipeline](ANUGYA-SATYAPAK-PHASE-2-AI-PIPELINE.md)
+- [Phase 3: visual refresh and brand assets](ANUGYA-SATYAPAK-PHASE-3-VISUAL-DESIGN.md)
+- [Phase 4: Chrome extension](ANUGYA-SATYAPAK-PHASE-4-EXTENSION.md)

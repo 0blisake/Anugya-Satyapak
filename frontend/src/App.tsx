@@ -1,55 +1,90 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { demoReport } from './mockReport'
-import type { Finding, Report } from './types'
+import type { ApiHealth, ExtractionResult, Finding, Report } from './types'
 
 type Locale = 'en' | 'hi'
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const apiUrl = (path: string) => `${API_BASE_URL}${path}`
+const MAX_FILE_BYTES = 12 * 1024 * 1024
+const MAX_BATCH_BYTES = 30 * 1024 * 1024
+const MAX_BATCH_FILES = 10
+const MAX_TEXT_CHARS = 250_000
+const SUPPORTED_FILE = /\.(pdf|png|jpe?g|webp|txt|md)$/i
+const IMAGE_FILE = /\.(png|jpe?g|webp)$/i
 
 const copy = {
   en: {
     navSummary: 'Summary', navContact: 'Contact', jurisdiction: 'Reviewing for', language: 'Language',
     eyebrow: 'A clearer look at the fine print', headline: 'Know what you’re agreeing to.',
     intro: 'Drop in a contract. We’ll surface the terms that could affect your money, choices, or rights—in language that makes sense.',
-    uploadTitle: 'Start with your contract', uploadHint: 'PDF, photo, or text · one file at a time', browse: 'Browse files', pasteTab: 'Paste text', uploadTab: 'Upload a file',
-    drop: 'Drop your contract here', or: 'or', pastePlaceholder: 'Paste the terms and conditions here…', analyze: 'Review contract', analyzing: 'Reading your contract…',
+    uploadTitle: 'Start with your contract', uploadHint: 'One PDF or text file, or up to 10 screenshots · 12 MB each / 30 MB total', browse: 'Choose files', pasteTab: 'Paste text', uploadTab: 'Upload file(s)',
+    batchHint: 'For screenshots, select them in page order. You can reorder them below.', prepare: 'Extract text for review', preparing: 'Reading your file(s)…', reExtract: 'Extract again', extractedTitle: 'Check the extracted text', extractedHint: 'OCR can make mistakes. Correct the text here before reviewing it.',
+    pages: 'pages', moveUp: 'Move page up', moveDown: 'Move page down', clearFiles: 'Clear files', ocrUnavailable: 'Photo and scanned-page OCR is not ready on this API:', fileOffline: 'The analysis API is offline. Pasted text and TXT/MD files can still use the browser’s basic scan; PDFs and photos need the API.',
+    drop: 'Drop a contract or screenshots here', or: 'or', pastePlaceholder: 'Paste the terms and conditions here…', analyze: 'Review contract', analyzing: 'Reviewing your contract…',
     sample: 'Explore a sample report', sampleHint: 'See what a review looks like with a fictional subscription agreement.',
     looksFor: 'What we look for', lookOne: 'Renewals, cancellation & lock-in', lookTwo: 'Extra fees, penalties & refunds', lookThree: 'Changes, disputes & liability',
-    privacy: 'Prototype notice', privacyText: 'Without an API, pasted text is scanned in your browser. With an API connected, files go to that server for processing. The prototype does not keep a contract database; check the host’s privacy settings before sharing real documents.',
+    privacy: 'Prototype notice', privacyText: 'When the API is offline, pasted text uses a browser rule scan. File extraction sends selected files to the API. With AI enabled, corrected contract text is forwarded to OpenAI for analysis. Use only documents you are permitted to share; hosting and provider terms apply.',
     resultEyebrow: 'Your contract review', quick: 'Quick read', full: 'Detailed findings', sources: 'Sources & citations',
     download: 'Download report', print: 'Print / save PDF', found: 'items to review', allClear: 'No matching clauses were detected by this prototype scan.',
     original: 'Original clause', plain: 'In plain language', why: 'Why it may matter', next: 'What you can check', page: 'Page',
-    review: 'Needs a closer look', moderate: 'Worth checking', info: 'For your awareness', confidence: 'Match confidence',
+    review: 'Needs a closer look', moderate: 'Worth checking', info: 'For your awareness', confidence: 'Evidence clarity', confidenceLow: 'Low', confidenceMedium: 'Medium', confidenceHigh: 'High', uncertainties: 'Context to check',
+    aiConsent: 'I understand that the corrected contract text will be sent to the Anugya Satyapak API and OpenAI for analysis. I will share only text I am permitted to submit.', aiConsentRequired: 'Confirm the AI processing notice before starting this review.',
+    aiMode: 'AI-assisted prototype', rulesMode: 'Rules-based prototype', aiBannerTitle: 'AI-assisted first-pass review', aiBannerText: 'AI suggestions are shown only when their quoted evidence matches the supplied text. Approved source records are attached by the API. This can still miss terms or misread context and is not legal advice.',
+    rulesBannerTitle: 'This is a pattern-based prototype scan.', rulesBannerText: 'It surfaces wording for review. It does not determine whether a term is fair, enforceable, or unlawful.',
     citationNote: 'These sources are possible reference points, not a legal conclusion. A lawyer can assess how they apply to your situation.',
     disclaimer: 'Anugya Satyapak is an early prototype. It may miss terms or misread context. This report is general information, not legal advice.',
     lawyerTitle: 'Need advice for your situation?', lawyerText: 'A qualified lawyer can review the full contract and explain your options. Lawyer matching is not live in this prototype.',
     lawyerButton: 'Lawyer referrals coming soon', contactTitle: 'Contact the team', contactText: 'Questions or feedback? Contact details will be added before the public demo.',
     footerLine: 'Understand the terms. Make your own decision.', scanMode: 'Prototype scan', demoMode: 'Sample report', loadingError: 'Could not reach the analysis service.',
-    backendHint: 'For PDF and photo extraction, start the local API. You can also paste contract text or use the sample report.', remove: 'Remove file',
+    backendHint: 'Start the API to extract PDFs and photos. You can also paste text or use the sample report.', remove: 'Remove file',
+    apiReady: 'AI review ready', apiRules: 'Rules-based mode', apiAiNoOcr: 'AI ready · OCR unavailable', apiRulesNoOcr: 'Rules mode · OCR unavailable', apiDemo: 'Demo mode',
   },
   hi: {
     navSummary: 'सारांश', navContact: 'संपर्क', jurisdiction: 'समीक्षा क्षेत्र', language: 'भाषा',
     eyebrow: 'छोटी लिखावट को स्पष्ट रूप से समझें', headline: 'जानें कि आप किन शर्तों से सहमत हो रहे हैं।',
     intro: 'समझौता अपलोड करें। हम उन शर्तों को सामने लाएँगे जो आपके पैसे, विकल्पों या अधिकारों को प्रभावित कर सकती हैं—सरल भाषा में।',
-    uploadTitle: 'अपने समझौते से शुरू करें', uploadHint: 'PDF, फोटो या टेक्स्ट · एक बार में एक फ़ाइल', browse: 'फ़ाइल चुनें', pasteTab: 'टेक्स्ट पेस्ट करें', uploadTab: 'फ़ाइल अपलोड करें',
-    drop: 'समझौता यहाँ छोड़ें', or: 'या', pastePlaceholder: 'नियम और शर्तें यहाँ पेस्ट करें…', analyze: 'समझौते की समीक्षा करें', analyzing: 'समझौता पढ़ रहे हैं…',
+    uploadTitle: 'अपने समझौते से शुरू करें', uploadHint: 'एक PDF या टेक्स्ट फ़ाइल, या अधिकतम 10 स्क्रीनशॉट · हर फ़ाइल 12 MB, कुल 30 MB तक', browse: 'फ़ाइलें चुनें', pasteTab: 'टेक्स्ट पेस्ट करें', uploadTab: 'फ़ाइलें अपलोड करें',
+    batchHint: 'स्क्रीनशॉट को पेज के क्रम में चुनें। नीचे उनका क्रम बदला जा सकता है।', prepare: 'समीक्षा के लिए टेक्स्ट निकालें', preparing: 'फ़ाइलें पढ़ रहे हैं…', reExtract: 'फिर से टेक्स्ट निकालें', extractedTitle: 'निकाले गए टेक्स्ट की जाँच करें', extractedHint: 'OCR में गलती हो सकती है। समीक्षा से पहले यहाँ टेक्स्ट ठीक करें।',
+    pages: 'पृष्ठ', moveUp: 'पृष्ठ ऊपर ले जाएँ', moveDown: 'पृष्ठ नीचे ले जाएँ', clearFiles: 'फ़ाइलें हटाएँ', ocrUnavailable: 'इस API पर फोटो और स्कैन किए गए पेज का OCR उपलब्ध नहीं है:', fileOffline: 'विश्लेषण API ऑफ़लाइन है। पेस्ट किया टेक्स्ट और TXT/MD फ़ाइलें ब्राउज़र स्कैन से जाँची जा सकती हैं; PDF और फोटो के लिए API चाहिए।',
+    drop: 'समझौता या स्क्रीनशॉट यहाँ छोड़ें', or: 'या', pastePlaceholder: 'नियम और शर्तें यहाँ पेस्ट करें…', analyze: 'समझौते की समीक्षा करें', analyzing: 'समीक्षा कर रहे हैं…',
     sample: 'नमूना रिपोर्ट देखें', sampleHint: 'काल्पनिक सब्सक्रिप्शन समझौते की समीक्षा का उदाहरण देखें।',
     looksFor: 'हम क्या देखते हैं', lookOne: 'नवीनीकरण, रद्दीकरण और लॉक-इन', lookTwo: 'अतिरिक्त शुल्क, जुर्माना और रिफंड', lookThree: 'बदलाव, विवाद और ज़िम्मेदारी',
-    privacy: 'प्रोटोटाइप सूचना', privacyText: 'API के बिना, पेस्ट किया गया टेक्स्ट आपके ब्राउज़र में स्कैन होता है। API जुड़ी हो तो फ़ाइलें प्रोसेसिंग के लिए उस सर्वर पर भेजी जाती हैं। यह प्रोटोटाइप समझौते संग्रहीत नहीं करता; असली दस्तावेज़ साझा करने से पहले होस्ट की गोपनीयता सेटिंग जाँचें।',
+    privacy: 'प्रोटोटाइप सूचना', privacyText: 'API ऑफ़लाइन होने पर पेस्ट किया गया पाठ ब्राउज़र के नियम-आधारित स्कैन से जाँचा जाता है। फ़ाइल निकालने के लिए चुनी गई फ़ाइलें API पर भेजी जाती हैं। AI चालू होने पर सुधारा गया समझौता-पाठ विश्लेषण के लिए OpenAI को भेजा जाता है। केवल वही दस्तावेज़ साझा करें जिन्हें भेजने की अनुमति आपके पास है; होस्ट और प्रदाता की शर्तें लागू होती हैं।',
     resultEyebrow: 'आपके समझौते की समीक्षा', quick: 'संक्षिप्त जानकारी', full: 'विस्तृत निष्कर्ष', sources: 'स्रोत और उद्धरण',
     download: 'रिपोर्ट डाउनलोड करें', print: 'प्रिंट / PDF सेव करें', found: 'जाँचने योग्य बातें', allClear: 'इस प्रोटोटाइप स्कैन में कोई मेल खाती शर्त नहीं मिली।',
     original: 'मूल शर्त', plain: 'सरल भाषा में', why: 'यह क्यों मायने रख सकता है', next: 'आप क्या जाँच सकते हैं', page: 'पृष्ठ',
-    review: 'ध्यान से जाँचें', moderate: 'जाँच करना उपयोगी होगा', info: 'जानकारी के लिए', confidence: 'मिलान का भरोसा',
+    review: 'ध्यान से जाँचें', moderate: 'जाँच करना उपयोगी होगा', info: 'जानकारी के लिए', confidence: 'साक्ष्य की स्पष्टता', confidenceLow: 'कम', confidenceMedium: 'मध्यम', confidenceHigh: 'अधिक', uncertainties: 'जाँचने योग्य संदर्भ',
+    aiConsent: 'मैं समझता/समझती हूँ कि सुधारा गया समझौता-पाठ विश्लेषण के लिए Anugya Satyapak API और OpenAI को भेजा जाएगा। मैं केवल वही पाठ साझा करूँगा/करूँगी जिसे भेजने की अनुमति मेरे पास है।', aiConsentRequired: 'समीक्षा शुरू करने से पहले AI प्रोसेसिंग सूचना की पुष्टि करें।',
+    aiMode: 'AI-सहायित प्रोटोटाइप', rulesMode: 'नियम-आधारित प्रोटोटाइप', aiBannerTitle: 'AI-सहायित प्रारंभिक समीक्षा', aiBannerText: 'AI सुझाव तभी दिखते हैं जब उद्धृत साक्ष्य दिए गए पाठ से मेल खाता है। API केवल स्वीकृत स्रोत रिकॉर्ड जोड़ता है। फिर भी कुछ शर्तें छूट सकती हैं या संदर्भ गलत समझा जा सकता है; यह कानूनी सलाह नहीं है।',
+    rulesBannerTitle: 'यह नियम-आधारित प्रोटोटाइप स्कैन है।', rulesBannerText: 'यह जाँच योग्य शब्दों को सामने लाता है। यह तय नहीं करता कि कोई शर्त उचित, लागू करने योग्य या गैरकानूनी है।',
     citationNote: 'ये संभावित संदर्भ स्रोत हैं, कानूनी निष्कर्ष नहीं। वकील बता सकते हैं कि ये आपकी स्थिति पर कैसे लागू होते हैं।',
     disclaimer: 'Anugya Satyapak शुरुआती प्रोटोटाइप है। यह शर्तें छोड़ सकता है या संदर्भ गलत समझ सकता है। यह सामान्य जानकारी है, कानूनी सलाह नहीं।',
     lawyerTitle: 'अपनी स्थिति पर सलाह चाहिए?', lawyerText: 'योग्य वकील पूरे समझौते की समीक्षा कर आपके विकल्प समझा सकते हैं। इस प्रोटोटाइप में वकील से मिलान की सुविधा उपलब्ध नहीं है।',
     lawyerButton: 'वकील रेफ़रल जल्द उपलब्ध होंगे', contactTitle: 'टीम से संपर्क करें', contactText: 'सवाल या सुझाव? सार्वजनिक डेमो से पहले संपर्क विवरण जोड़े जाएँगे।',
     footerLine: 'शर्तें समझें। अपना निर्णय स्वयं लें।', scanMode: 'प्रोटोटाइप स्कैन', demoMode: 'नमूना रिपोर्ट', loadingError: 'विश्लेषण सेवा से संपर्क नहीं हो सका।',
-    backendHint: 'PDF और फोटो निकालने के लिए स्थानीय API शुरू करें। आप टेक्स्ट पेस्ट कर सकते हैं या नमूना रिपोर्ट देख सकते हैं।', remove: 'फ़ाइल हटाएँ',
+    backendHint: 'PDF और फोटो से टेक्स्ट निकालने के लिए API शुरू करें। आप टेक्स्ट पेस्ट कर सकते हैं या नमूना रिपोर्ट देख सकते हैं।', remove: 'फ़ाइल हटाएँ',
+    apiReady: 'AI समीक्षा उपलब्ध', apiRules: 'नियम-आधारित मोड', apiAiNoOcr: 'AI उपलब्ध · OCR नहीं', apiRulesNoOcr: 'नियम मोड · OCR नहीं', apiDemo: 'डेमो मोड',
   },
 }
 
 const sourceForRule = demoReport.citations
+
+async function apiErrorMessage(response: Response, fallback: string) {
+  try {
+    const payload = await response.json() as { detail?: unknown }
+    if (typeof payload.detail === 'string') return payload.detail
+    if (Array.isArray(payload.detail)) {
+      return payload.detail.map((item) => typeof item === 'object' && item && 'msg' in item ? String(item.msg) : String(item)).join('; ')
+    }
+  } catch {
+    // Keep the user-facing fallback when the server did not return JSON.
+  }
+  return fallback
+}
+
+function formatBytes(bytes: number) {
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
 
 function Icon({ name, size = 20 }: { name: string; size?: number }) {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true as const }
@@ -146,7 +181,9 @@ function downloadReport(report: Report) {
 function App() {
   const [locale, setLocale] = useState<Locale>('en')
   const [inputMode, setInputMode] = useState<'file' | 'text'>('file')
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<File[]>([])
+  const [extraction, setExtraction] = useState<ExtractionResult | null>(null)
+  const [extractedText, setExtractedText] = useState('')
   const [text, setText] = useState('')
   const [jurisdiction, setJurisdiction] = useState('India · Central')
   const [report, setReport] = useState<Report | null>(null)
@@ -154,76 +191,180 @@ function App() {
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
   const [backendReady, setBackendReady] = useState(false)
+  const [aiAvailable, setAiAvailable] = useState(false)
+  const [aiMessage, setAiMessage] = useState('')
+  const [aiConsent, setAiConsent] = useState(false)
+  const [ocrAvailable, setOcrAvailable] = useState<boolean | null>(null)
+  const [ocrMessage, setOcrMessage] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const t = copy[locale]
   const isHi = locale === 'hi'
 
   useEffect(() => {
-    fetch(apiUrl('/api/health')).then((response) => setBackendReady(response.ok)).catch(() => setBackendReady(false))
+    let active = true
+    fetch(apiUrl('/api/health'))
+      .then(async (response) => {
+        if (!response.ok) throw new Error('API health check failed')
+        const health = await response.json() as ApiHealth
+        if (!active) return
+        setBackendReady(health.status === 'ok')
+        setAiAvailable(health.ai_available === true)
+        setAiMessage(typeof health.ai_message === 'string' ? health.ai_message : '')
+        setOcrAvailable(typeof health.ocr_available === 'boolean' ? health.ocr_available : null)
+        setOcrMessage(typeof health.ocr_message === 'string' ? health.ocr_message : '')
+      })
+      .catch(() => {
+        if (!active) return
+        setBackendReady(false)
+        setAiAvailable(false)
+        setAiMessage('')
+        setOcrAvailable(null)
+        setOcrMessage('')
+      })
+    return () => { active = false }
   }, [])
 
-  function chooseFile(next: File | undefined) {
-    if (!next) return
-    const allowed = /\.(pdf|png|jpe?g|webp|txt|md)$/i.test(next.name)
-    if (!allowed) {
-      setError('Choose a PDF, PNG, JPG, WEBP, TXT, or MD file.')
+  function chooseFiles(nextFiles: File[]) {
+    if (!nextFiles.length) return
+    if (busy) {
+      setError('Wait for the current file operation to finish before changing the upload.')
       return
     }
-    if (next.size > 12 * 1024 * 1024) {
-      setError('This prototype accepts files up to 12 MB.')
+    if (nextFiles.length > MAX_BATCH_FILES) {
+      setError(`Choose ${MAX_BATCH_FILES} files or fewer at a time.`)
       return
     }
-    setFile(next)
+    const unsupported = nextFiles.find((next) => !SUPPORTED_FILE.test(next.name))
+    if (unsupported) {
+      setError(`${unsupported.name}: choose a PDF, PNG, JPG, WEBP, TXT, or MD file.`)
+      return
+    }
+    const tooLarge = nextFiles.find((next) => next.size > MAX_FILE_BYTES)
+    if (tooLarge) {
+      setError(`${tooLarge.name}: each file must be 12 MB or smaller.`)
+      return
+    }
+    if (nextFiles.length > 1 && !nextFiles.every((next) => IMAGE_FILE.test(next.name))) {
+      setError('Select one PDF or text file, or select multiple screenshots only.')
+      return
+    }
+    const batchSize = nextFiles.reduce((total, next) => total + next.size, 0)
+    if (batchSize > MAX_BATCH_BYTES) {
+      setError('The selected files total more than 30 MB. Choose fewer or smaller screenshots.')
+      return
+    }
+    setFiles(nextFiles)
+    setExtraction(null)
+    setExtractedText('')
+    setAiConsent(false)
     setError('')
     setReport(null)
   }
 
+  function removeFile(index: number) {
+    const remaining = files.filter((_, current) => current !== index)
+    setFiles(remaining)
+    setExtraction(null)
+    setExtractedText('')
+    setAiConsent(false)
+    setReport(null)
+    setError('')
+    if (!remaining.length && fileRef.current) fileRef.current.value = ''
+  }
+
+  function clearFiles() {
+    setFiles([])
+    setExtraction(null)
+    setExtractedText('')
+    setAiConsent(false)
+    setReport(null)
+    setError('')
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  function moveFile(index: number, direction: -1 | 1) {
+    const target = index + direction
+    if (target < 0 || target >= files.length) return
+    const reordered = [...files]
+    ;[reordered[index], reordered[target]] = [reordered[target], reordered[index]]
+    setFiles(reordered)
+    setExtraction(null)
+    setExtractedText('')
+    setAiConsent(false)
+    setReport(null)
+    setError('')
+  }
+
+  async function prepareFiles() {
+    if (!files.length) {
+      setError('Choose a PDF, text file, or screenshots before extracting text.')
+      return
+    }
+    setError('')
+    setBusy(true)
+    try {
+      let result: ExtractionResult
+      if (backendReady) {
+        const form = new FormData()
+        files.forEach((selected) => form.append('files', selected))
+        const response = await fetch(apiUrl('/api/extract'), { method: 'POST', body: form })
+        if (!response.ok) throw new Error(await apiErrorMessage(response, 'The API could not extract this file.'))
+        result = await response.json() as ExtractionResult
+      } else if (files.length === 1 && /\.(txt|md)$/i.test(files[0].name)) {
+        const content = (await files[0].text()).trim()
+        if (!content) throw new Error('This text file is empty.')
+        if (content.length > MAX_TEXT_CHARS) throw new Error(`The extracted text is longer than ${MAX_TEXT_CHARS.toLocaleString()} characters. Split the document into smaller parts.`)
+        result = { document_name: files[0].name, source_files: [files[0].name], extracted_text: content, page_count: 1, warnings: [] }
+      } else {
+        throw new Error(t.fileOffline)
+      }
+
+      if (!result.extracted_text?.trim()) throw new Error('No readable text was returned. Try a clearer file or paste the text instead.')
+      setExtraction(result)
+      setExtractedText(result.extracted_text)
+      setAiConsent(false)
+      setReport(null)
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : 'Could not extract text from the selected file(s).')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function analyze() {
     setError('')
+    if (backendReady && aiAvailable && !aiConsent) {
+      setError(t.aiConsentRequired)
+      return
+    }
+    const reviewText = inputMode === 'text' ? text.trim() : extractedText.trim()
+    const documentName = inputMode === 'text' ? 'Pasted contract text' : extraction?.document_name
+    if (!reviewText) {
+      setError(inputMode === 'text' ? 'Paste contract text before starting the review.' : 'Extract the file text first, then review it.')
+      return
+    }
+    if (reviewText.length > MAX_TEXT_CHARS) {
+      setError(`Text must be ${MAX_TEXT_CHARS.toLocaleString()} characters or fewer. Split the document into smaller parts.`)
+      return
+    }
+
     setBusy(true)
     try {
       const form = new FormData()
       form.append('jurisdiction', jurisdiction)
       form.append('language', locale === 'hi' ? 'Hindi' : 'English')
-      if (inputMode === 'text') {
-        if (!text.trim()) {
-          setError('Paste contract text before starting the review.')
-          setBusy(false)
-          return
-        }
-        form.append('text', text)
-        if (backendReady) {
-          try {
-            const response = await fetch(apiUrl('/api/analyze'), { method: 'POST', body: form })
-            if (!response.ok) throw new Error('API returned an error')
-            setReport(await response.json() as Report)
-          } catch {
-            setReport(localScan(text, 'Pasted contract text', jurisdiction))
-          }
-        } else {
-          setReport(localScan(text, 'Pasted contract text', jurisdiction))
-        }
+      form.append('text', reviewText)
+      form.append('ai_consent', String(backendReady && aiAvailable && aiConsent))
+      if (documentName) form.append('document_name', documentName)
+
+      if (backendReady) {
+        const response = await fetch(apiUrl('/api/analyze'), { method: 'POST', body: form })
+        if (!response.ok) throw new Error(await apiErrorMessage(response, t.loadingError))
+        setReport(await response.json() as Report)
       } else {
-        if (!file) {
-          setError('Choose a contract file, paste text, or open the sample report.')
-          setBusy(false)
-          return
-        }
-        if (!backendReady) {
-          if (/\.(txt|md)$/i.test(file.name)) {
-            setReport(localScan(await file.text(), file.name, jurisdiction))
-          } else {
-            setError('The file analysis API is not running. ' + t.backendHint)
-            setBusy(false)
-            return
-          }
-        } else {
-          form.append('file', file)
-          const response = await fetch(apiUrl('/api/analyze'), { method: 'POST', body: form })
-          const payload = await response.json()
-          if (!response.ok) throw new Error(payload.detail || t.loadingError)
-          setReport(payload as Report)
-        }
+        const localReport = localScan(reviewText, documentName || 'Pasted contract text', jurisdiction)
+        if (inputMode === 'file' && extraction?.warnings.length) localReport.extraction_warning = extraction.warnings.join(' ')
+        setReport(localReport)
       }
       window.setTimeout(() => document.getElementById('summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
     } catch (exception) {
@@ -235,6 +376,7 @@ function App() {
 
   function showSample() {
     setReport(demoReport)
+    setAiConsent(false)
     setError('')
     window.setTimeout(() => document.getElementById('summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
   }
@@ -242,7 +384,7 @@ function App() {
   function onDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
     setDragging(false)
-    chooseFile(event.dataTransfer.files[0])
+    chooseFiles(Array.from(event.dataTransfer.files))
   }
 
   function summaryFor(finding: Finding) {
@@ -255,7 +397,13 @@ function App() {
     return finding.why_it_matters
   }
 
-  const fileInput = <input ref={fileRef} className="visually-hidden" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/png,image/jpeg,image/webp,text/plain" onChange={(event) => chooseFile(event.target.files?.[0])} />
+  function confidenceDetails(finding: Finding) {
+    if (typeof finding.confidence === 'number') return `${Math.round(finding.confidence * 100)}% (pattern match)`
+    const label = finding.confidence === 'high' ? t.confidenceHigh : finding.confidence === 'medium' ? t.confidenceMedium : t.confidenceLow
+    return `${t.confidence}: ${label}`
+  }
+
+  const fileInput = <input ref={fileRef} className="visually-hidden" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/png,image/jpeg,image/webp,text/plain" onChange={(event) => { chooseFiles(Array.from(event.target.files ?? [])); event.target.value = '' }} />
   const findings = report?.findings ?? []
   const reviewCount = findings.filter((finding) => finding.risk !== 'Informational').length
 
@@ -296,31 +444,54 @@ function App() {
           <div className="upload-panel panel">
             <div className="panel-heading">
               <div><span className="step-label">01 / START HERE</span><h2>{t.uploadTitle}</h2></div>
-              <div className={`api-status ${backendReady ? 'api-online' : ''}`}><span />{backendReady ? 'API connected' : 'Demo mode'}</div>
+              <div className={`api-status ${backendReady ? 'api-online' : ''}`} title={backendReady ? [aiMessage, ocrAvailable === false ? ocrMessage : ''].filter(Boolean).join(' ') : undefined}><span />{!backendReady ? t.apiDemo : aiAvailable ? (ocrAvailable === false ? t.apiAiNoOcr : t.apiReady) : (ocrAvailable === false ? t.apiRulesNoOcr : t.apiRules)}</div>
             </div>
             <div className="input-tabs" role="tablist" aria-label="Contract input type">
-              <button className={inputMode === 'file' ? 'active' : ''} role="tab" aria-selected={inputMode === 'file'} onClick={() => { setInputMode('file'); setError('') }}><Icon name="upload" size={16} />{t.uploadTab}</button>
-              <button className={inputMode === 'text' ? 'active' : ''} role="tab" aria-selected={inputMode === 'text'} onClick={() => { setInputMode('text'); setError('') }}><Icon name="file" size={16} />{t.pasteTab}</button>
+              <button className={inputMode === 'file' ? 'active' : ''} role="tab" aria-selected={inputMode === 'file'} disabled={busy} onClick={() => { setInputMode('file'); setAiConsent(false); setError('') }}><Icon name="upload" size={16} />{t.uploadTab}</button>
+              <button className={inputMode === 'text' ? 'active' : ''} role="tab" aria-selected={inputMode === 'text'} disabled={busy} onClick={() => { setInputMode('text'); setAiConsent(false); setError('') }}><Icon name="file" size={16} />{t.pasteTab}</button>
             </div>
             {inputMode === 'file' ? <>
               {fileInput}
-              <div className={`dropzone ${dragging ? 'dragging' : ''} ${file ? 'has-file' : ''}`} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop}>
-                {file ? <>
-                  <span className="file-badge"><Icon name="file" size={22} /></span>
-                  <div className="selected-file"><strong>{file.name}</strong><span>{(file.size / (1024 * 1024)).toFixed(2)} MB · ready to review</span></div>
-                  <button className="text-button remove-file" onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = '' }}>{t.remove}</button>
+              <div className={`dropzone ${dragging ? 'dragging' : ''} ${files.length ? 'has-file' : ''}`} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop}>
+                {files.length ? <>
+                  <div className="file-queue-heading"><div><strong>{files.length === 1 ? files[0].name : `${files.length} screenshots selected`}</strong><span>{formatBytes(files.reduce((total, selected) => total + selected.size, 0))} total · {files.length === 1 ? '1 file' : `${files.length} pages in selected order`}</span></div></div>
+                  <ul className="selected-file-list">
+                    {files.map((selected, index) => <li className="selected-file-row" key={`${selected.name}-${selected.size}-${selected.lastModified}-${index}`}>
+                      <span className="file-badge"><Icon name="file" size={19} /></span>
+                      <div className="selected-file"><strong>{files.length > 1 ? `${t.page} ${index + 1} · ` : ''}{selected.name}</strong><span>{formatBytes(selected.size)}</span></div>
+                      {files.length > 1 && <div className="file-order-controls">
+                        <button type="button" className="order-button" aria-label={`${t.moveUp}: ${selected.name}`} title={t.moveUp} disabled={index === 0 || busy} onClick={() => moveFile(index, -1)}>↑</button>
+                        <button type="button" className="order-button" aria-label={`${t.moveDown}: ${selected.name}`} title={t.moveDown} disabled={index === files.length - 1 || busy} onClick={() => moveFile(index, 1)}>↓</button>
+                      </div>}
+                      <button type="button" className="text-button remove-file" aria-label={`${t.remove}: ${selected.name}`} onClick={() => removeFile(index)} disabled={busy}>{t.remove}</button>
+                    </li>)}
+                  </ul>
+                  <div className="file-queue-actions"><button type="button" className="browse-button" onClick={() => fileRef.current?.click()} disabled={busy}>{t.browse}</button><button type="button" className="text-button" onClick={clearFiles} disabled={busy}>{t.clearFiles}</button></div>
                 </> : <>
                   <span className="upload-icon"><Icon name="upload" size={23} /></span>
                   <strong>{t.drop}</strong><span className="or-line">{t.or}</span>
                   <button className="browse-button" onClick={() => fileRef.current?.click()}>{t.browse}<Icon name="arrow" size={16} /></button>
-                  <small>{t.uploadHint}</small>
+                  <small>{t.uploadHint}<br />{t.batchHint}</small>
                 </>}
               </div>
-              <button className="primary-button full-button" onClick={analyze} disabled={busy || !file}>{busy ? <><span className="spinner" />{t.analyzing}</> : <>{t.analyze}<Icon name="arrow" size={17} /></>}</button>
+              {!backendReady && <div className="inline-notice"><Icon name="shield" size={16} /><span>{t.fileOffline}</span></div>}
+              {backendReady && ocrAvailable === false && <div className="inline-notice notice-warning"><Icon name="shield" size={16} /><span>{t.ocrUnavailable} {ocrMessage} Digital PDFs may still work when they contain selectable text.</span></div>}
+              {files.length > 0 && <button className="primary-button full-button" onClick={prepareFiles} disabled={busy}>{busy ? <><span className="spinner" />{t.preparing}</> : <>{extraction ? t.reExtract : t.prepare}<Icon name="arrow" size={17} /></>}</button>}
+              {extraction && <section className="extraction-preview" aria-labelledby="extraction-title">
+                <div className="extraction-heading"><div><span className="step-label">02 / TEXT CHECK</span><h3 id="extraction-title">{t.extractedTitle}</h3></div><span className="page-count">{extraction.page_count} {extraction.page_count === 1 ? t.page.toLowerCase() : t.pages}</span></div>
+                <p className="extraction-help">{t.extractedHint}</p>
+                {extraction.warnings.map((warning, index) => <div className="warning-message" role="status" key={`${warning}-${index}`}><Icon name="shield" size={16} />{warning}</div>)}
+                <label className="visually-hidden" htmlFor="extracted-contract-text">Correct extracted contract text</label>
+                <textarea id="extracted-contract-text" className="contract-textarea extraction-textarea" value={extractedText} onChange={(event) => { setExtractedText(event.target.value); setAiConsent(false); setReport(null) }} maxLength={MAX_TEXT_CHARS} disabled={busy} />
+                <div className="text-meta"><span>{extractedText.length.toLocaleString()} / {MAX_TEXT_CHARS.toLocaleString()} characters</span><span>{extraction.source_files.length} source {extraction.source_files.length === 1 ? 'file' : 'files'}</span></div>
+                {backendReady && aiAvailable && <label className="ai-consent"><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>{t.aiConsent}</span></label>}
+                <button className="primary-button full-button" onClick={analyze} disabled={busy || !extractedText.trim()}>{busy ? <><span className="spinner" />{t.analyzing}</> : <>{t.analyze}<Icon name="arrow" size={17} /></>}</button>
+              </section>}
             </> : <>
               <label className="visually-hidden" htmlFor="contract-text">Paste contract text</label>
-              <textarea id="contract-text" className="contract-textarea" placeholder={t.pastePlaceholder} value={text} onChange={(event) => { setText(event.target.value); setReport(null) }} />
-              <div className="text-meta"><span>{text.trim() ? `${text.trim().split(/\s+/).length} words` : 'Your text stays in this browser in demo mode'}</span><span>Up to 80,000 characters</span></div>
+              <textarea id="contract-text" className="contract-textarea" placeholder={t.pastePlaceholder} value={text} onChange={(event) => { setText(event.target.value); setAiConsent(false); setReport(null) }} maxLength={MAX_TEXT_CHARS} disabled={busy} />
+              <div className="text-meta"><span>{text.trim() ? `${text.trim().split(/\s+/).length} words · ${text.length.toLocaleString()} characters` : 'Your text stays in this browser in demo mode'}</span><span>Up to {MAX_TEXT_CHARS.toLocaleString()} characters</span></div>
+              {backendReady && aiAvailable && <label className="ai-consent"><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>{t.aiConsent}</span></label>}
               <button className="primary-button full-button" onClick={analyze} disabled={busy || !text.trim()}>{busy ? <><span className="spinner" />{t.analyzing}</> : <>{t.analyze}<Icon name="arrow" size={17} /></>}</button>
             </>}
             {error && <div className="error-message" role="alert"><Icon name="shield" size={17} />{error}</div>}
@@ -348,11 +519,12 @@ function App() {
 
         {report && <section id="summary" className="report-section page-width">
           <div className="report-header">
-            <div><span className="step-label">02 / REVIEW</span><div className="report-title-row"><h2>{t.resultEyebrow}</h2><span className={`mode-pill ${report.analysis_mode === 'demo' ? 'sample-pill' : ''}`}>{report.analysis_mode === 'demo' ? t.demoMode : t.scanMode}</span></div><p className="report-file"><Icon name="file" size={15} />{report.document_name}<span>·</span>{report.jurisdiction}</p></div>
+            <div><span className="step-label">03 / REVIEW</span><div className="report-title-row"><h2>{t.resultEyebrow}</h2><span className={`mode-pill ${report.analysis_mode === 'demo' ? 'sample-pill' : ''}`}>{report.analysis_mode === 'demo' ? t.demoMode : report.analysis_mode === 'ai-assisted-prototype' ? t.aiMode : t.rulesMode}</span></div><p className="report-file"><Icon name="file" size={15} />{report.document_name}<span>·</span>{report.jurisdiction}</p></div>
             <div className="report-actions"><button className="secondary-button" onClick={() => downloadReport(report)}><Icon name="download" size={17} />{t.download}</button><button className="quiet-button" onClick={() => window.print()}>{t.print}</button></div>
           </div>
-          <div className="prototype-banner"><span className="banner-icon"><Icon name="spark" size={18} /></span><div><strong>{report.analysis_mode === 'demo' ? 'You’re viewing a fictional sample contract.' : 'This is a pattern-based prototype scan.'}</strong><p>{report.analysis_mode === 'demo' ? 'It demonstrates the report layout. The sample findings are illustrative and do not assess a real agreement.' : 'It surfaces wording for review. It does not determine whether a term is fair, enforceable, or unlawful.'}</p></div></div>
+          <div className="prototype-banner"><span className="banner-icon"><Icon name="spark" size={18} /></span><div><strong>{report.analysis_mode === 'demo' ? 'You’re viewing a fictional sample contract.' : report.analysis_mode === 'ai-assisted-prototype' ? t.aiBannerTitle : t.rulesBannerTitle}</strong><p>{report.analysis_mode === 'demo' ? 'It demonstrates the report layout. The sample findings are illustrative and do not assess a real agreement.' : report.analysis_mode === 'ai-assisted-prototype' ? t.aiBannerText : t.rulesBannerText}</p></div></div>
           {report.extraction_warning && <div className="warning-banner"><Icon name="shield" size={18} />{report.extraction_warning}</div>}
+          {report.analysis_warning && <div className="warning-banner"><Icon name="shield" size={18} />{report.analysis_warning}</div>}
           <div className="summary-overview">
             <div className="overview-main"><div className="section-kicker"><span className="status-dot" />{t.quick}</div><p>{isHi && report.analysis_mode === 'demo' ? (report.contract_summary_hi || report.contract_summary) : report.contract_summary}</p><div className="summary-count"><strong>{reviewCount}</strong><span>{t.found}</span><span className="count-divider" /><span>{findings.length} total</span></div></div>
             <div className="summary-stat"><span className="stat-label">TERMS SURFACED</span><strong>{findings.length.toString().padStart(2, '0')}</strong><span>Across {new Set(findings.map((finding) => finding.category)).size} categories</span></div>
@@ -364,20 +536,20 @@ function App() {
             </a>) : <div className="empty-result"><Icon name="check" size={18} />{t.allClear}</div>}
           </div>
 
-          <div className="findings-heading"><div><span className="step-label">03 / THE DETAILS</span><h2>{t.full}</h2></div><span className="finding-count">{findings.length} findings</span></div>
+          <div className="findings-heading"><div><span className="step-label">04 / THE DETAILS</span><h2>{t.full}</h2></div><span className="finding-count">{findings.length} findings</span></div>
           <div className="findings-list">
             {findings.map((finding, index) => <article id={`finding-${finding.id}`} key={finding.id} className="finding-card">
               <div className="finding-top"><span className="finding-index">{String(index + 1).padStart(2, '0')}</span><div className="finding-title"><span className="category-label">{finding.category}{finding.page ? ` · ${t.page} ${finding.page}` : ''}</span><h3>{finding.title}</h3></div><span className={`risk-pill risk-pill-${finding.risk.toLowerCase()}`}><span />{finding.risk === 'Informational' ? t.info : finding.risk === 'Moderate' ? t.moderate : t.review}</span></div>
-              <div className="finding-body"><div className="clause-quote"><div className="body-label"><span className="quote-mark">“</span>{t.original}</div><blockquote>{finding.original_clause}</blockquote></div><div className="explanation-grid"><div><div className="body-label">{t.plain}</div><p>{summaryFor(finding)}</p></div><div><div className="body-label">{t.why}</div><p>{reasonFor(finding)}</p></div></div><div className="next-step"><span className="next-icon"><Icon name="check" size={15} /></span><p><strong>{t.next}:</strong> {finding.suggested_action}</p></div></div>
-              <div className="finding-footer"><span><Icon name="spark" size={14} />{t.confidence}: {Math.round(finding.confidence * 100)}% <span className="confidence-note">(pattern match)</span></span>{finding.citations.length > 0 && <a href="#sources">View source <Icon name="arrow" size={14} /></a>}</div>
+              <div className="finding-body"><div className="clause-quote"><div className="body-label"><span className="quote-mark">“</span>{t.original}</div><blockquote>{finding.original_clause}</blockquote></div><div className="explanation-grid"><div><div className="body-label">{t.plain}</div><p>{summaryFor(finding)}</p></div><div><div className="body-label">{t.why}</div><p>{reasonFor(finding)}</p></div></div><div className="next-step"><span className="next-icon"><Icon name="check" size={15} /></span><p><strong>{t.next}:</strong> {finding.suggested_action}</p></div>{finding.uncertainties?.length ? <div className="uncertainty-note"><strong>{t.uncertainties}</strong><ul>{finding.uncertainties.map((uncertainty, uncertaintyIndex) => <li key={`${finding.id}-uncertainty-${uncertaintyIndex}`}>{uncertainty}</li>)}</ul></div> : null}</div>
+              <div className="finding-footer"><span><Icon name="spark" size={14} />{confidenceDetails(finding)}</span>{finding.citations.length > 0 && <a href="#sources">View source <Icon name="arrow" size={14} /></a>}</div>
             </article>)}
           </div>
 
           <section id="sources" className="sources-section">
-            <div className="sources-heading"><div><span className="step-label">04 / REFERENCE</span><h2>{t.sources}</h2></div><span className="source-count"><Icon name="link" size={15} />{report.citations.length} source{report.citations.length === 1 ? '' : 's'}</span></div>
+            <div className="sources-heading"><div><span className="step-label">05 / REFERENCE</span><h2>{t.sources}</h2></div><span className="source-count"><Icon name="link" size={15} />{report.citations.length} source{report.citations.length === 1 ? '' : 's'}</span></div>
             {report.citations.length ? <><p className="sources-intro">Legal references matched to selected findings. Open the official source to read the provision in context.</p><div className="source-list">{report.citations.map((citation) => <article className="source-card" key={citation.id}><div className="source-badge"><Icon name="file" size={18} /></div><div className="source-content"><span className="source-act">{citation.title}</span><h3>{citation.section}</h3><p>{citation.description}</p><div className="source-relevance"><strong>Why it appears</strong><span>{citation.relevance}</span></div></div><a className="source-link" href={citation.url} target="_blank" rel="noreferrer" aria-label={`Open ${citation.title} source`}><Icon name="arrow" size={17} /></a></article>)}</div><p className="citation-note"><Icon name="shield" size={17} />{t.citationNote}</p></> : <div className="no-sources"><span className="source-badge"><Icon name="link" size={18} /></span><div><strong>No specific legal source matched these findings.</strong><p>This prototype only displays citations from its reviewed source list. That does not mean no law applies.</p></div></div>}
           </section>
-          {isHi && report.analysis_mode !== 'demo' && <p className="translation-note">अभी नई रिपोर्टों के लिए अनुवाद सुविधा उपलब्ध नहीं है। मूल अनुबंध का पाठ बिना बदलाव दिखाया गया है।</p>}
+          {isHi && report.analysis_mode !== 'demo' && report.analysis_mode !== 'ai-assisted-prototype' && <p className="translation-note">अभी नियम-आधारित रिपोर्टों के लिए अनुवाद सुविधा उपलब्ध नहीं है। मूल अनुबंध का पाठ बिना बदलाव दिखाया गया है।</p>}
         </section>}
 
         <section id="contact" className="support-section page-width">
