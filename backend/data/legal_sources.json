@@ -1,0 +1,30 @@
+[
+  {
+    "id": "cp-act-2-46-ii",
+    "title": "Consumer Protection Act, 2019",
+    "section": "Section 2(46)(ii)",
+    "description": "Lists a wholly disproportionate penalty on a consumer as one feature of an unfair contract.",
+    "relevance": "Possible reference point when a contract imposes a large cancellation or breach penalty. Applicability depends on the full agreement and facts.",
+    "url": "https://www.indiacode.nic.in/bitstream/123456789/16939/1/a2019-35.pdf",
+    "source_type": "official statute repository",
+    "jurisdiction": "India · Central",
+    "enactment_date": "2019-08-09",
+    "effective_date": "2020-07-24",
+    "last_checked": "2026-10-09",
+    "review_status": "prototype seed; verify before production"
+  },
+  {
+    "id": "cp-act-2-46-vi",
+    "title": "Consumer Protection Act, 2019",
+    "section": "Section 2(46)(vi)",
+    "description": "Includes an unreasonable charge, obligation, or condition that puts a consumer at a disadvantage in the definition of an unfair contract.",
+    "relevance": "Possible reference point when reviewing an additional charge. The tool does not determine whether a specific charge is unreasonable.",
+    "url": "https://www.indiacode.nic.in/bitstream/123456789/16939/1/a2019-35.pdf",
+    "source_type": "official statute repository",
+    "jurisdiction": "India · Central",
+    "enactment_date": "2019-08-09",
+    "effective_date": "2020-07-24",
+    "last_checked": "2026-10-09",
+    "review_status": "prototype seed; verify before production"
+  }
+]
