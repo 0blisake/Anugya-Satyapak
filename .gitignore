@@ -4,6 +4,7 @@ frontend/dist/
 
 # Python
 backend/.venv/
+backend/.pip-tmp/
 backend/__pycache__/
 **/__pycache__/
 *.py[cod]

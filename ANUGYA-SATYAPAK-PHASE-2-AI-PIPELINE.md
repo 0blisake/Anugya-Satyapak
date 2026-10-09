@@ -33,7 +33,7 @@ The eight review categories are:
 
 - Long text is split into chunks of up to 16,000 characters with a nominal 1,000-character overlap. Paragraph alignment can reduce the overlap by up to about 400 characters. The splitter prefers paragraph and line boundaries where it can do so without creating a very short chunk.
 - Every chunk receives a first review against the eight categories. A separate coverage pass re-reads that chunk and is asked to find supported material the first pass omitted.
-- Provider concurrency is capped at two simultaneous requests. The second pass starts after the first pass returns, so each document uses up to two analysis calls per chunk. When findings are accepted, one additional summary request is made.
+- For a single document review, provider concurrency is capped at two simultaneous requests. The second pass starts after the first pass returns, so each document uses up to two analysis calls per chunk. When findings are accepted, one additional summary request is made. This is a per-review limit, not a global service limit; concurrent users can create more provider requests, and the API still needs rate limits and a spend cap before public deployment.
 - Contract text is explicitly treated as untrusted evidence. Prompts say to ignore embedded instructions, avoid inventing obligations, inspect exceptions and negation, and avoid legal conclusions.
 - Findings use a strict schema for category, risk label, qualitative evidence clarity, exact quote, explanation, uncertainty, suggested check, and optional approved source IDs.
 

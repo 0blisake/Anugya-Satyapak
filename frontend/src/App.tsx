@@ -411,7 +411,7 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Anugya Satyapak home">
-          <span className="brand-mark"><Icon name="logo" size={23} /></span>
+          <span className="brand-mark"><Icon name="logo" size={23} /><img src={`${import.meta.env.BASE_URL}brand/logo-mark.svg`} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('brand-mark-fallback') }} /></span>
           <span>Anugya <span className="brand-strong">Satyapak</span></span>
           <span className="brand-beta">BETA</span>
         </a>
@@ -558,7 +558,7 @@ function App() {
         </section>
       </main>
 
-      <footer className="site-footer"><div className="footer-inner page-width"><a className="brand footer-brand" href="#top"><span className="brand-mark"><Icon name="logo" size={21} /></span><span>Anugya <span className="brand-strong">Satyapak</span></span></a><p>{t.footerLine}</p><span>© 2026 Anugya Satyapak · Prototype</span></div><div className="footer-disclaimer page-width"><Icon name="shield" size={15} />{t.disclaimer}</div></footer>
+      <footer className="site-footer"><div className="footer-inner page-width"><a className="brand footer-brand" href="#top"><span className="brand-mark"><Icon name="logo" size={21} /><img src={`${import.meta.env.BASE_URL}brand/logo-mark.svg`} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; event.currentTarget.parentElement?.classList.add('brand-mark-fallback') }} /></span><span>Anugya <span className="brand-strong">Satyapak</span></span></a><p>{t.footerLine}</p><span>© 2026 Anugya Satyapak · Prototype</span></div><div className="footer-disclaimer page-width"><Icon name="shield" size={15} />{t.disclaimer}</div></footer>
     </div>
   )
 }

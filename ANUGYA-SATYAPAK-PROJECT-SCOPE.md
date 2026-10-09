@@ -8,7 +8,7 @@ This checklist maps the provided problem statement, solution outline, and final 
 | Correct OCR text before review | Editable extracted-text preview with page markers and extraction warnings | Implemented in Phase 1; one combined editor rather than per-page editors |
 | Diagnose photo API readiness | API health includes OCR runtime/language readiness and upload limits | Implemented in Phase 1; deployment host limits still need a live-host check |
 | Short bullet summary | Summary area with count and first three findings | Implemented for sample and scan results |
-| Readable, welcoming branded interface | Responsive theme with the requested navy, blue, cream, and lime palette; larger report typography; logo-ready asset folder | Implemented in Phase 3; TypeScript/build and local preview pass; 390 px view has no horizontal overflow |
+| Readable, welcoming branded interface | Paper texture, green-led palette, ribbon details, larger report typography, responsive layout, and supplied logo in the header/footer | Implemented in Phase 3; TypeScript/build pass; refreshed browser/device visual review remains pending |
 | Quick browser extension | Desktop Chrome Manifest V3 toolbar popup that reads selected or rendered page text, lets the user correct it, and submits to the shared analysis API | Implemented in Phase 4; JavaScript and manifest checks pass; Chrome install and live API flow remain unverified in this environment |
 | Detailed contract review | Finding cards with exact evidence, plain-language explanation, next step, uncertainty, and a concise summary | Implemented in Phase 2 behind OpenAI configuration; rules scan remains the unconfigured fallback; dynamic quality review pending |
 | Broad review checklist | Eight categories reviewed per document chunk, followed by an independent omission pass | Implemented in Phase 2; model recall and false positives still need evaluation |
@@ -42,7 +42,7 @@ This checklist maps the provided problem statement, solution outline, and final 
 
 ## Phase implementation records
 
-- Phase 1 intake and extraction: [implementation notes](../ANUGYA-SATYAPAK-PHASE-1-INTAKE.md).
+- Phase 1 intake and extraction are mapped in the requirements table above; the original standalone Phase 1 note is not included in this repository.
 - Phase 2 AI analysis: [pipeline implementation, roadmap cross-check, setup, and open verification items](ANUGYA-SATYAPAK-PHASE-2-AI-PIPELINE.md).
 - Phase 3 website presentation: [palette, typography, responsive styling, and brand asset folder](ANUGYA-SATYAPAK-PHASE-3-VISUAL-DESIGN.md).
 - Phase 4 browser extension: [capture flow, permission model, setup, and verification checklist](ANUGYA-SATYAPAK-PHASE-4-EXTENSION.md).
