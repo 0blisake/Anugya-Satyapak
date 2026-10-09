@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { demoReport } from './mockReport'
+import { EXTENSION_GUIDE_URL } from './extensionGuide'
 import type { ApiHealth, ExtractionResult, Finding, Report } from './types'
 
 type Locale = 'en' | 'hi'
@@ -37,6 +38,8 @@ const copy = {
     disclaimer: 'Anugya Satyapak is an early prototype. It may miss terms or misread context. This report is general information, not legal advice.',
     lawyerTitle: 'Need advice for your situation?', lawyerText: 'A qualified lawyer can review the full contract and explain your options. Lawyer matching is not live in this prototype.',
     lawyerButton: 'Lawyer referrals coming soon', contactTitle: 'Contact the team', contactText: 'Questions or feedback? Contact details will be added before the public demo.',
+    extensionTitle: 'A quick check while you browse', extensionText: 'The extension is a local demo for a presenter’s laptop. It is not published in the Chrome Web Store; use the setup guide to load it in desktop Chrome.',
+    extensionButton: 'View local setup guide', extensionPrivacy: 'Read the extension privacy notice',
     footerLine: 'Understand the terms. Make your own decision.', scanMode: 'Prototype scan', demoMode: 'Sample report', loadingError: 'Could not reach the analysis service.',
     backendHint: 'The optional local API can provide AI analysis after you consent. You can also use the browser-based scan or sample report.', remove: 'Remove file',
     apiReady: 'AI review ready', apiRules: 'Rules-based mode', apiDemo: 'Browser scan ready · AI optional', publicMode: 'Files stay in this browser', publicTextMeta: 'Your text stays in this browser · English-focused pattern scan', localTextMeta: 'Text stays in this browser unless you use the optional local API',
@@ -65,6 +68,8 @@ const copy = {
     disclaimer: 'Anugya Satyapak शुरुआती प्रोटोटाइप है। यह शर्तें छोड़ सकता है या संदर्भ गलत समझ सकता है। यह सामान्य जानकारी है, कानूनी सलाह नहीं।',
     lawyerTitle: 'अपनी स्थिति पर सलाह चाहिए?', lawyerText: 'योग्य वकील पूरे समझौते की समीक्षा कर आपके विकल्प समझा सकते हैं। इस प्रोटोटाइप में वकील से मिलान की सुविधा उपलब्ध नहीं है।',
     lawyerButton: 'वकील रेफ़रल जल्द उपलब्ध होंगे', contactTitle: 'टीम से संपर्क करें', contactText: 'सवाल या सुझाव? सार्वजनिक डेमो से पहले संपर्क विवरण जोड़े जाएँगे।',
+    extensionTitle: 'ब्राउज़ करते समय त्वरित जाँच', extensionText: 'यह एक्सटेंशन प्रस्तुतकर्ता के लैपटॉप पर स्थानीय डेमो के लिए है। यह Chrome Web Store पर प्रकाशित नहीं है; डेस्कटॉप Chrome में इसे लोड करने के लिए सेटअप गाइड देखें।',
+    extensionButton: 'स्थानीय सेटअप गाइड देखें', extensionPrivacy: 'एक्सटेंशन की गोपनीयता सूचना पढ़ें',
     footerLine: 'शर्तें समझें। अपना निर्णय स्वयं लें।', scanMode: 'प्रोटोटाइप स्कैन', demoMode: 'नमूना रिपोर्ट', loadingError: 'विश्लेषण सेवा से संपर्क नहीं हो सका।',
     backendHint: 'वैकल्पिक स्थानीय API सहमति के बाद AI विश्लेषण कर सकती है। आप ब्राउज़र स्कैन या नमूना रिपोर्ट भी इस्तेमाल कर सकते हैं।', remove: 'फ़ाइल हटाएँ',
     apiReady: 'AI समीक्षा उपलब्ध', apiRules: 'नियम-आधारित मोड', apiDemo: 'ब्राउज़र स्कैन तैयार · AI वैकल्पिक', publicMode: 'फ़ाइलें इसी ब्राउज़र में रहती हैं', publicTextMeta: 'आपका टेक्स्ट इसी ब्राउज़र में रहता है · अंग्रेज़ी पैटर्न स्कैन', localTextMeta: 'वैकल्पिक स्थानीय API इस्तेमाल न हो तो टेक्स्ट ब्राउज़र में रहता है',
@@ -542,6 +547,14 @@ function App() {
 
         <section id="contact" className="support-section page-width">
           <div className="support-card"><div className="support-icon"><Icon name="shield" size={23} /></div><div><span className="step-label">A NEXT STEP, WHEN YOU NEED IT</span><h2>{t.lawyerTitle}</h2><p>{t.lawyerText}</p></div><button className="support-button" disabled>{t.lawyerButton}<Icon name="arrow" size={16} /></button></div>
+          <div className="extension-store-card">
+            <div className="extension-store-mark"><img src={`${import.meta.env.BASE_URL}brand/logo-mark.svg`} alt="" /></div>
+            <div className="extension-store-copy"><span className="step-label">ANUGYA SATYAPAK · QUICK CHECK</span><h2>{t.extensionTitle}</h2><p>{t.extensionText}</p></div>
+            <div className="extension-store-action">
+              <a className="extension-store-button" href={EXTENSION_GUIDE_URL} target="_blank" rel="noopener noreferrer">{t.extensionButton}<Icon name="arrow" size={16} /></a>
+              <a className="extension-privacy-link" href={`${import.meta.env.BASE_URL}extension-privacy.html`}>{t.extensionPrivacy}</a>
+            </div>
+          </div>
           <div className="contact-strip"><div><span className="step-label">GET IN TOUCH</span><h3>{t.contactTitle}</h3><p>{t.contactText}</p></div><span className="contact-mark">AS<span>·</span></span></div>
         </section>
       </main>

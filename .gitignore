@@ -15,6 +15,7 @@ backend/__pycache__/
 *.py[cod]
 
 # Local configuration and generated files
+/work/
 .env
 .env.*
 !.env.example

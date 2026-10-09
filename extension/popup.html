@@ -15,52 +15,55 @@
           <p class="eyebrow">ANUGYA SATYAPAK</p>
           <h1>Quick check</h1>
         </div>
-        <button id="settings-button" class="icon-button" type="button" aria-label="Open extension settings" title="Extension settings">⚙</button>
+        <button id="clear-button" class="icon-button" type="button" aria-label="Clear text and results" title="Clear text and results">Clear</button>
       </header>
 
-      <section class="connection-card" aria-live="polite">
-        <div class="connection-heading"><span id="connection-dot" class="connection-dot"></span><strong id="connection-title">Connecting to your review service…</strong></div>
-        <p id="connection-detail">Your text stays in this popup until you choose to send it.</p>
-        <button id="configure-button" class="text-button" type="button" hidden>Set up the API connection</button>
+      <section class="privacy-card" aria-label="Privacy and scope">
+        <div class="privacy-heading"><span class="privacy-dot" aria-hidden="true"></span><strong>Private browser check</strong></div>
+        <p>This English pattern scan runs in your browser. Your contract text is not sent to a review service.</p>
       </section>
 
       <section class="capture-section" aria-labelledby="capture-heading">
         <div class="section-heading">
           <div><span class="step-label">01 / CHOOSE TEXT</span><h2 id="capture-heading">What should we check?</h2></div>
         </div>
-        <p class="helper-copy">Choose a selection, read the current page, or paste the relevant terms below. Review the text before sending it.</p>
+        <p class="helper-copy">When you open this popup, selected text is captured if available. You can paste a clause or choose to read visible page text.</p>
         <div class="capture-actions">
-          <button id="selection-button" class="secondary-button" type="button">Use selected text</button>
-          <button id="page-button" class="secondary-button" type="button">Read page text</button>
+          <button id="selection-button" class="secondary-button" type="button">Capture selection</button>
+          <button id="page-button" class="secondary-button" type="button">Read visible page</button>
         </div>
-        <label class="input-label" for="contract-text">Text for review</label>
-        <textarea id="contract-text" maxlength="40000" placeholder="Select text above or paste contract terms here…" spellcheck="false"></textarea>
-        <div class="text-meta"><span id="capture-source">Nothing captured yet</span><span id="character-count">0 / 40,000</span></div>
+        <label class="input-label" for="contract-text">Review and edit the text</label>
+        <textarea id="contract-text" maxlength="40000" placeholder="Select a passage, or paste contract terms here…" spellcheck="false"></textarea>
+        <div class="text-meta"><span id="capture-source">Checking for selected text…</span><span id="character-count">0 / 40,000</span></div>
         <p id="capture-message" class="capture-message" role="status" hidden></p>
       </section>
 
-      <label class="consent-row">
-        <input id="send-consent" type="checkbox" />
-        <span id="consent-copy">I understand this text will be sent to the configured Anugya Satyapak API. If AI review is enabled, it will also be sent to OpenAI.</span>
-      </label>
-
-      <button id="review-button" class="primary-button" type="button" disabled>Review this text</button>
-      <p class="privacy-note">Quick issue spotting only. The extension does not decide whether a term is legal or enforceable. Text is not saved by the extension.</p>
+      <button id="review-button" class="primary-button" type="button" disabled>Run local quick check</button>
+      <p id="review-hint" class="review-hint" role="status" aria-live="polite">Add text above to enable the quick check: paste a clause, capture selected text, or read visible page text.</p>
+      <p class="scope-note">Looks for a small set of English wording patterns in renewals, fees, refunds, changes, disputes, and liability.</p>
       <p id="error-message" class="error-message" role="alert" hidden></p>
 
       <section id="report" class="report-section" aria-live="polite" hidden>
-        <div class="report-heading"><div><span class="step-label">02 / QUICK REPORT</span><h2>Your first-pass review</h2></div><span id="mode-pill" class="mode-pill"></span></div>
-        <div id="report-warning" class="report-warning" hidden></div>
+        <div class="report-heading"><div><span class="step-label">02 / QUICK REPORT</span><h2>Your first-pass review</h2></div><span id="mode-pill" class="mode-pill">Local · English</span></div>
         <p id="summary" class="summary-copy"></p>
-        <p id="no-findings" class="no-findings" hidden>No supported review items were surfaced in this text. This does not confirm that the contract is safe or complete.</p>
+        <p id="no-findings" class="no-findings" hidden>No wording from the extension’s limited patterns was detected. This does not confirm that the agreement is safe or complete.</p>
         <div id="findings" class="findings-list"></div>
         <p id="more-findings" class="more-findings" hidden></p>
-        <a id="full-review-link" class="full-review-link" href="#" target="_blank" rel="noreferrer" hidden>Open the full website for a detailed review</a>
-        <p id="full-review-help" class="full-review-help" hidden>The website does not receive this text. Paste it there if you need a full review.</p>
-        <p class="report-disclaimer">Check every quoted passage in the full agreement. No result can confirm that a contract is safe or complete.</p>
+        <p class="report-disclaimer">Read each passage in context. This pattern-based prototype can miss indirect wording and does not determine whether a term is fair, enforceable, or unlawful.</p>
       </section>
 
-      <footer><span>ANUGYA SATYAPAK</span><span>Quick review · Keep your decision</span></footer>
+      <section class="website-card" aria-label="Full contract review">
+        <span class="step-label">NEED A FULL REVIEW?</span>
+        <p>Use the website for PDFs, photos, text correction, and the complete report.</p>
+        <div class="website-actions">
+          <button id="copy-text-button" class="secondary-button" type="button" disabled>Copy text</button>
+          <a class="website-link" href="https://0blisake.github.io/Anugya-Satyapak/" target="_blank" rel="noopener noreferrer">Open full website</a>
+        </div>
+        <p id="copy-message" class="copy-message" role="status" hidden></p>
+        <p class="website-help">The website does not receive this text automatically. Paste it there if you want to continue this review.</p>
+      </section>
+
+      <footer><span>ANUGYA SATYAPAK</span><span>Quick review · Keep your decision</span><a href="https://0blisake.github.io/Anugya-Satyapak/extension-privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a></footer>
     </main>
   </body>
 </html>

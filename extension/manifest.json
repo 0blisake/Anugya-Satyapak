@@ -1,21 +1,25 @@
 {
   "manifest_version": 3,
   "name": "Anugya Satyapak — Quick Check",
-  "version": "0.1.0",
-  "description": "A user-triggered first-pass check of selected contract text or a webpage.",
+  "version": "0.2.0",
+  "description": "Check selected contract wording locally with a small English pattern scan.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
-  ],
-  "optional_host_permissions": [
-    "https://*/*",
-    "http://localhost/*",
-    "http://127.0.0.1/*"
+    "clipboardWrite"
   ],
   "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    },
     "default_title": "Check this page with Anugya Satyapak",
     "default_popup": "popup.html"
-  },
-  "options_page": "options.html"
+  }
 }

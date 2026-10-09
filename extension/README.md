@@ -1,39 +1,48 @@
-# Anugya Satyapak Quick Check — Chrome prototype
+# Anugya Satyapak Quick Check
 
-This is a Manifest V3 unpacked Chrome extension for quick, user-triggered checks of selected contract text or text rendered on the active webpage. It sends text to the same FastAPI `POST /api/analyze` endpoint as the website. The backend key is never placed in the extension.
+This is a Chrome Manifest V3 prototype for a fast first-pass check of text on a webpage. It is intended as a **local laptop showcase for the project team**, not as a Chrome Web Store release. The scan runs inside the extension in the browser. It does not need a backend, API address, AI provider, or API key, and it does not send the contract text over the network.
+
+The full website remains the place for PDFs, photos, text correction, and the longer report: [Anugya Satyapak](https://0blisake.github.io/Anugya-Satyapak/).
 
 ## Load it in desktop Chrome
 
-1. Start the Anugya Satyapak backend by following the backend steps in the repository README. The local address is normally `http://127.0.0.1:8000`.
-2. Open `chrome://extensions` in Chrome and turn on **Developer mode**.
-3. Select **Load unpacked** and choose this `extension/` folder.
+1. On each laptop that will run the showcase, download or clone this repository and unzip it if needed. If the team shares the standalone extension ZIP, extract it first; the extracted package folder directly contains `manifest.json`. No backend or npm command is required to use the extension.
+2. In desktop Chrome, open `chrome://extensions` and turn on **Developer mode**.
+3. Select **Load unpacked** and choose the repository's `extension/` folder. Choose the folder that directly contains `manifest.json`.
 4. Pin **Anugya Satyapak — Quick Check** from Chrome's Extensions menu if you want it beside the address bar.
-5. Open the extension's settings from its popup. Keep the default local API address for a local backend, or enter the origin of your hosted API. A hosted API must use HTTPS. Select **Save and allow this API** and approve the origin Chrome presents.
-6. Optionally enter the full-review website URL, such as the GitHub Pages URL shown after deployment. The extension opens that URL from a report, but it does not copy the captured text into the site.
-7. Open a webpage with contract terms and click the extension. Choose **Use selected text** or **Read page text**, review/edit the text, acknowledge the send notice, and select **Review this text**. You can also paste text directly.
+5. On a webpage, select a clause and click the extension. The selected text is preloaded when the browser permits it. Otherwise, paste text or choose **Read visible page**.
+6. Check and edit the captured text, then select **Run local quick check**. The compact report appears in the popup.
 
-The Quick Check shows the first eight findings. Use the website for longer documents, PDF/photo extraction, text correction, and the complete downloadable report. The public GitHub Pages site performs extraction and OCR in the browser; it does not send contract files to an Anugya Satyapak server.
+If **Run local quick check** is disabled, the text box is empty. Paste text, use **Capture selection**, or choose **Read visible page**; the button becomes available as soon as text is present. If Chrome blocks capture on a browser-internal page or PDF viewer, copy and paste the text instead.
+
+For a full website review, select **Copy text** and then **Open full website**. Paste the copied text into the website yourself; the extension does not transfer it automatically. The website also supports PDF and photo extraction in the browser.
+
+## What the quick scan checks
+
+The extension uses the website's limited English pattern checks for renewal/cancellation, additional charges, refunds/termination, changes to terms, disputes, and liability. It returns the first matching passage it finds for each category. It is a short issue-spotting aid, not a comprehensive contract analysis, jurisdiction-specific legal opinion, or decision about whether a term is fair, enforceable, unlawful, or safe. A result with no matches does not mean there are no important terms.
+
+The quick scan is intentionally self-contained and does not provide the website's citations, AI-assisted analysis, PDF/photo OCR, or downloadable full report. Use the website for those workflows.
 
 ## Privacy and permissions
 
-- `activeTab` and `scripting` let the extension read selection/page text after the user opens Quick Check and clicks one of its capture buttons. It does not continuously monitor tabs or run an always-on content script.
-- API host access is optional and requested for the origin entered in extension settings. Hosted origins must use HTTPS. Chrome's [`activeTab` permission](https://developer.chrome.com/docs/extensions/develop/concepts/activeTab) provides temporary access after a user invokes the extension, and [optional host permissions](https://developer.chrome.com/docs/extensions/reference/api/permissions) let the user approve the configured API origin at runtime.
-- The captured text remains in popup memory until the user explicitly submits it. The consent notice explains that the text goes to the Anugya Satyapak API and also to OpenAI when the backend reports AI mode.
-- Extension local storage holds only the configured API origin and optional website URL. It does not save captured page or contract text.
-- No API key, provider secret, website login, or browser cookie is stored in this extension.
+- `activeTab` and `scripting` allow the extension to read selected text or visible page text after you open the popup. It does not continuously monitor tabs or run a background content script.
+- The extension has no API host access, does not call a review server, and does not store page or contract text.
+- `clipboardWrite` is used only when you click **Copy text**. The website link is a separate action, and the extension does not pass text in the link.
+- Text stays in the open popup and is discarded when the popup closes. Browser-internal pages and some PDF viewers, image-only pages, canvas content, or embedded frames may block text capture; paste available text or use the website's file workflow.
+- Public policy: [Extension privacy notice](https://0blisake.github.io/Anugya-Satyapak/extension-privacy.html).
 
 ## Prototype limits
 
-- English interface and English review requests only.
-- The quick-review input is limited to 40,000 characters. For a longer document, use the full website.
-- Page capture reads text rendered in the active document. Review the capture before sending it; pages can include navigation, notices, or unrelated copy.
-- Chrome-internal/restricted pages, some built-in PDF viewers, image-only pages, canvas content, and inaccessible embedded frames may not expose readable text. Select/copy and paste available text, or use the website's PDF/image extraction route.
-- The extension reports candidate review items, not legal advice or a conclusion that an agreement is lawful, unfair, enforceable, or safe.
-- Chrome Web Store submission, a privacy policy, stable published extension ID, and browser-family compatibility review are not part of this prototype.
+- English wording patterns only; the extension does not translate Hindi text.
+- The quick-check field is limited to 40,000 characters. For longer documents, use the website.
+- Visible page text can contain navigation, notices, and unrelated copy. Review it before scanning.
+- The scan can miss indirect, unusual, or context-dependent wording. It may flag harmless wording as well.
+- The extension is loaded unpacked by the presenter in desktop Chrome. There is no Chrome Web Store listing, public install link, or developer-dashboard submission in the current project plan.
 
 ## Source files
 
-- `manifest.json` — Manifest V3 action, permissions, and popup/options pages.
-- `popup.html`, `popup.css`, `popup.js` — capture controls and compact report view.
-- `options.html`, `options.css`, `options.js` — API origin and optional website configuration.
-- `shared.js` — URL validation and extension settings helpers.
+- `manifest.json` — Manifest V3 action and narrow, user-invoked permissions.
+- `popup.html`, `popup.css`, `popup.js` — capture, local quick scan, and compact report interface.
+- `local-scan.js` — browser-local English pattern checks used by the popup.
+- `icons/` — Chrome-compatible PNG sizes plus the SVG source.
+- `store-assets/` — retained draft artwork; not used by the laptop showcase.

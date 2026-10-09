@@ -80,17 +80,15 @@ Keep the API window open only when using the optional local API. To stop it, pre
 
 The local API can use AI if you add your own `OPENAI_API_KEY` and supported `OPENAI_MODEL` to `backend/.env`. The prototype asks for consent before sending corrected contract text for AI analysis. Provider API usage may incur charges. Never put an API key in frontend files, GitHub Pages variables, the extension, or the repository.
 
-## Load the Chrome extension
+## Local Chrome extension showcase
 
-The extension is an unpacked desktop Chrome prototype and is not currently distributed through the Chrome Web Store. It remains a separate, quick-check feature from the website's full browser-based PDF/photo review.
+The extension is a laptop-demo build for the project team. It is **not published in the Chrome Web Store**, and the current plan does not require developer registration or a Store submission. It runs locally in desktop Chrome, without the backend, an API key, or npm.
 
-1. Start the local API using the steps above.
-2. In desktop Chrome, open `chrome://extensions` and turn on **Developer mode**.
-3. Select **Load unpacked** and choose this repository's `extension/` folder.
-4. Keep its API setting at `http://127.0.0.1:8000` and approve Chrome's optional host permission when prompted.
-5. Open the extension on a webpage, choose selected text or rendered page text, check/edit the captured text, then submit it for review.
+To prepare a presenter’s laptop, clone or download this repository, open `chrome://extensions` in desktop Chrome, turn on **Developer mode**, select **Load unpacked**, and choose the `extension/` folder that directly contains `manifest.json`. The extension guide has the complete steps and usage notes. Each laptop used for the demo must load the unpacked folder locally.
 
-The quick review is limited to 40,000 characters and shows a compact result. See the [extension guide](extension/README.md) for permissions and browser limitations.
+On a webpage, select a clause and click the extension. It preloads the selection when available; otherwise paste text or choose **Read visible page**. Review/edit the text and choose **Run local quick check**. If the button is disabled, the text box is empty; paste a clause, capture a selection, or choose **Read visible page**. For PDFs, photos, text correction, citations, or the full report, use the [website](https://0blisake.github.io/Anugya-Satyapak/).
+
+The quick review is limited to 40,000 characters and uses a small set of English wording patterns. It does not make legal determinations. See the [extension guide](extension/README.md) for setup, use, privacy, and permissions. The public [extension privacy notice](https://0blisake.github.io/Anugya-Satyapak/extension-privacy.html) is deployed with the website.
 
 ## How the prototype is put together
 

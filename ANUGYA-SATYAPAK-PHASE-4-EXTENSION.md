@@ -1,64 +1,66 @@
 # Anugya Satyapak — Phase 4: browser extension
 
-**Status:** The Chrome Manifest V3 prototype is implemented for owner review. Static extension checks pass. Browser and API runtime verification remains pending because this session has no Chrome browser surface and could not install the backend dependencies.
-**Product role:** Quick, user-triggered checks on selected webpage text or the current webpage; the website remains the full review workspace.
+**Status:** The extension is a local-first quick check intended for a laptop showcase by the project team. Its design follows the website's paper texture, forest-green palette, and ribbon details. It is loaded unpacked in desktop Chrome; no Chrome Web Store publication or developer registration is planned. No changes have been committed.
 
-## 1. Phase objective
+## 1. Product role
 
-Give a user a quick way to inspect contract terms on the page they are already viewing. Keep the extension thin: capture/edit text, send it to the same backend used by the website, and show a compact result. Do not create a separate prompt, model key, or citation system in the browser.
+The extension is a small, optional checkpoint for contract text on a webpage. It is for a short passage or quick first look while browsing. The website remains the full review workspace for long text, PDFs, photos, OCR, text correction, citations, and the complete report.
 
-## 2. Capture and review flow
+The extension is deliberately not a second full product. Its local scan uses the same six English pattern categories as the website's browser scan, but it does not provide AI, citations, or a legal conclusion.
 
-1. The user opens the toolbar popup.
-2. They choose **Use selected text**, **Read page text**, or paste terms into the editable field.
-3. The extension reads only after a capture button click. Page text is limited to 40,000 characters and remains editable in the popup.
-4. The user checks a disclosure saying text will be sent to the configured Anugya Satyapak API and, when AI mode is active, OpenAI.
-5. On **Review this text**, the popup posts the corrected text, English language, India · Central jurisdiction, a generic document label, and the consent field to `POST /api/analyze`.
-6. It shows the analysis mode, summary, warnings, and up to eight evidence-backed findings. Source links are accepted only when they use HTTPS.
-7. If configured, a link opens the full-review website. Captured text is not transferred; the site remains a separate full-review workflow.
+## 2. User flow
 
-The extension includes no independent rules scanner or AI integration. It uses the current shared API response shape and lets the backend retain responsibility for consent enforcement, finding validation, and citation selection.
+1. The user selects a passage on a webpage and clicks the extension.
+2. The popup attempts to preload the selection. If no text is selected, the user can paste a clause or explicitly choose **Read visible page**.
+3. The user reviews and edits the captured text. Page capture may include navigation, notices, or unrelated copy.
+4. **Run local quick check** evaluates the text in the extension popup. It does not call a server or send the text anywhere.
+5. The popup shows the matching passage and a short explanation for each of the six supported categories: renewal/cancellation, additional charges, refunds/termination, changes to terms, disputes, and liability.
+6. If a longer review is needed, **Copy text** and **Open full website** are separate, explicit actions. The user pastes the copied text into the website; there is no automatic transfer.
 
-## 3. Permission and data handling
+If the review button is disabled, the text box is empty. The popup now shows an instruction to paste text, capture a selection, or read visible page text. The button becomes enabled when text is present; no API or consent checkbox is involved.
 
-- Manifest V3 declares `activeTab`, `scripting`, and `storage`; it does not declare persistent access to every webpage and has no always-running content script or service worker.
-- Chrome access to the active tab is used only after the extension is invoked. The page extraction function returns text to the extension popup; it does not inject UI or modify the website.
-- The API origin is configured in the options page. The manifest declares optional HTTPS API-host access plus local loopback patterns. The options page requests permission for the configured origin after the user clicks Save; a hosted API address is restricted to HTTPS.
-- The configured API origin and optional full-site URL are the only values stored in `chrome.storage.local`. Page text stays in the open popup and is not stored in local storage.
-- The report renderer uses DOM text nodes rather than interpreting model content as HTML. Source links are limited to HTTPS before they are made clickable.
-- The extension never sends the current webpage URL or title to the analysis API.
+The quick-check field accepts up to 40,000 characters. The extension returns at most one first matching passage per category, so it is intentionally less detailed than the site report.
 
-This follows Chrome's user-invoked [`activeTab` model](https://developer.chrome.com/docs/extensions/develop/concepts/activeTab) and optional origin-permission approach. Cross-origin API requests require the extension to hold permission for the API host; see Chrome's [cross-origin request guidance](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests).
+## 3. Local scan and boundaries
 
-## 4. Phase 0 cross-check
+- `extension/local-scan.js` contains the English pattern rules and explanatory text, aligned with the website's browser-based pattern scan.
+- The extension reports wording to read closely. A match is not a legal finding, and no matches do not establish that an agreement is safe or complete.
+- It does not translate Hindi or other languages, infer jurisdiction, provide citations, run AI analysis, extract PDFs/photos, or create a downloadable report.
+- The extension and website each package their own browser-side rules for deployment. If the categories or rule wording change, keep both implementations aligned.
 
-| Phase 0 requirement | Implementation | Fit and remaining gap |
+## 4. Permissions and data handling
+
+The Manifest V3 extension requests only:
+
+- `activeTab` so the user-invoked popup can refer to the active tab;
+- `scripting` to read a selection or visible text after the user opens the popup; and
+- `clipboardWrite` for the explicit **Copy text** button.
+
+There are no persistent page-host permissions, API-host permissions, options page, background service worker, or always-running content script. The extension does not store captured text, inspect other tabs, or send contract text to a server. The full website is opened only when the user chooses its link.
+
+## 5. Fit against the project requirements
+
+| Requirement | Implementation | Fit |
 |---|---|---|
-| Desktop Chrome first, Manifest V3 | `extension/manifest.json` uses Manifest V3 and a toolbar popup | Fits the first target. No Edge/Firefox check has been done. |
-| User invokes review on current page or selection | Toolbar popup offers selected-text and page-text capture buttons | Fits. Capturing page text is bounded and editable. |
-| Avoid persistent access to all websites | Uses `activeTab` plus `scripting`; no always-on content script | Fits the planned permission boundary. Runtime Chrome permission behavior still needs the final browser check. |
-| Use the same backend as the website | Sends standard form fields to `/api/analyze` | Fits the shared report contract; hosted API integration remains dependent on owner backend configuration and allowed origin/network setup. |
-| State what data is sent and allow selection-only fallback | Editable capture preview, selection button, and explicit send acknowledgement | Fits. The user can remove unrelated page text before sending. |
-| Avoid storing page/contract text | Only API/website origins persist in Chrome storage; contract text stays in popup memory | Fits the extension's own persistence boundary. The backend/provider handling described in Phase 2 still applies after submit. |
-| Handle restricted and image-only pages | Helpful capture failure text and manual paste path | Fits as a fallback. PDF viewer and embedded/canvas behavior varies by page/browser. |
-| Refer heavy review to the website | Optional website URL setting and result link | Fits. No contract text is passed to the site; users paste/re-upload for a full report. |
-| Load unpacked for working model | Setup steps documented for `chrome://extensions` | Fits; Web Store publication is deferred. |
+| Quick use while browsing | Popup preloads selected text when available; paste and visible-page capture are alternatives | Fits the lightweight extension role |
+| Keep the site for heavy use | Website link directs users to PDF/photo OCR, correction, citations, and the full report | Keeps the two surfaces distinct |
+| Avoid API setup and user keys | Removed API address settings, API health checks, network submission, and backend requirement | Extension works without configuring a service |
+| Keep page access user-triggered | `activeTab` and `scripting`; no persistent hosts or background page reader | Limited to the active, invoked popup flow |
+| Keep contract text private by default | Local pattern scan; text is not sent or saved | Fits the intended browser-only quick check |
+| Let users continue on the website | Copy and website navigation are separate actions; user pastes the text | Explicit handoff with no text embedded in the URL |
+| Explain prototype limits | English pattern scope, 40,000-character limit, restricted-page notes, and no-safety conclusion are shown/documented | Prevents the quick check from appearing comprehensive |
+| Laptop showcase | Presenter loads the unpacked `extension/` folder in desktop Chrome | Fits the no-fee showcase plan; each demo laptop must load the folder locally |
 
-## 5. Configuration and operation
+## 6. Loading and manual browser review
 
-The extension can be installed unpacked directly from the repository's `extension/` folder. Run the backend separately and set the backend origin in extension settings. For local development use `http://127.0.0.1:8000`; for a hosted backend use its HTTPS origin. A provider secret belongs only in the backend environment, never in extension settings or extension files.
+1. Open `chrome://extensions` in desktop Chrome and enable **Developer mode**.
+2. Choose **Load unpacked** and select the repository's `extension/` folder, the one containing `manifest.json`.
+3. On a contract webpage, select a passage and open the popup. Confirm the selected text appears without pressing a capture button.
+4. Run a local check; confirm the report appears without a backend running or API settings.
+5. Repeat by pasting text, reading visible page text, clearing the popup, and using a restricted browser page.
+6. Try **Copy text**, then open the website and paste. Confirm the website only receives text after the user pastes and submits there.
+7. Confirm the field-empty state clearly explains why **Run local quick check** is disabled and that pasting or capturing text enables it.
 
-The full website URL is optional and separate from the API origin. Set it after GitHub Pages or another website host publishes the site. The extension does not forward captured text to that website.
+After changing the code, use **Reload** for this extension on `chrome://extensions`. If Chrome continues showing the previous options/API flow, remove the previous unpacked entry and load this `extension/` folder again.
 
-## 6. Final verification record
-
-- Passed: TypeScript check and Vite production build for the website.
-- Passed: Python syntax compilation for the backend modules.
-- Passed: JavaScript syntax checks for the extension modules and JSON parsing of the Manifest V3 file.
-- Passed: `git diff --check`; the branding scan found no outdated brand-name references.
-- Not run: backend API smoke requests. The host has Python 3.14 but no backend dependencies; pip could not write downloaded wheel metadata even when its temporary directory was placed inside the writable project folder.
-- Not run: Chrome installation, permission prompts, capture interaction, and extension-to-API request. The user approved the browser check, but this Codex session exposes only its in-app browser and no Chrome browser surface.
-
-To finish runtime verification on the owner's computer, load `extension/` unpacked in desktop Chrome, start the backend, grant access to its configured API origin, and try selection, page-text, paste, and submission in rules mode. Repeat with AI configured only after adding a backend key privately and confirming the data disclosure. Check restricted pages, source links, the optional website link, and that reopening the popup does not restore contract text.
-
-**Phase 4 outcome:** The shared-backend extension prototype and setup documentation are in place. Static checks passed; environment constraints prevented live API and Chrome runtime checks. The next action is to sync the completed project changes to the owner's existing GitHub repository.
+**Phase 4 outcome:** The extension follows the local-first quick-check role and shares the site's visual design language. It is for a presenter-installed laptop showcase, not global Store distribution. Load it through Chrome's **Developer mode → Load unpacked** flow using the folder containing `manifest.json`. The site links to those setup instructions. These changes are in the working tree only and are not committed.

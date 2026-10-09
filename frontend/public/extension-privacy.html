@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183f32">
+  <meta name="description" content="Privacy notice for the Anugya Satyapak Quick Check Chrome extension.">
+  <title>Extension Privacy — Anugya Satyapak</title>
+  <style>
+    :root { color-scheme: light; font-family: "DM Sans", "Segoe UI", sans-serif; color: #20392e; background: #f4f1dc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; padding: 28px 18px; background-color: #f4f1dc; background-image: radial-gradient(rgba(39,78,58,.09) .55px,transparent .8px), repeating-linear-gradient(0deg,rgba(92,102,66,.025) 0,rgba(92,102,66,.025) 1px,transparent 1px,transparent 4px), linear-gradient(135deg,#f5f2df,#edf0dd 52%,#f6f2df); background-size: 5px 5px,100% 4px,auto; }
+    main { position: relative; width: min(860px,100%); margin: 0 auto; padding: clamp(24px,5vw,54px); border: 1px solid #d9dfcc; border-radius: 7px 22px 22px 22px; background: rgba(252,250,238,.96); box-shadow: 0 18px 45px rgba(24,63,50,.1); }
+    main::before { position:absolute; top:0; left:35px; width:120px; height:6px; border-radius:0 0 5px 5px; background:linear-gradient(90deg,#5b8a61,#b8d184); content:""; }
+    a { color:#286047; text-underline-offset:3px; }
+    .eyebrow { margin:0 0 8px; color:#647c63; font-size:11px; font-weight:800; letter-spacing:1.25px; }
+    h1,h2 { color:#183f32; font-family:"Manrope","Segoe UI",sans-serif; }
+    h1 { margin:0 0 12px; font-size:clamp(32px,6vw,48px); letter-spacing:-1px; }
+    .updated { margin:0 0 32px; color:#68796b; font-size:13px; }
+    h2 { margin:30px 0 9px; font-size:20px; }
+    p,li { color:#53675a; font-size:15px; line-height:1.75; }
+    ul { padding-left:22px; }
+    .notice { padding:15px 18px; border:1px solid #cbd9c2; border-left:4px solid #6e945b; border-radius:5px 12px 12px 12px; background:#e9eddd; }
+    footer { margin-top:36px; padding-top:16px; border-top:1px solid #d9dfcc; color:#68796b; font-size:13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">ANUGYA SATYAPAK · QUICK CHECK</p>
+    <h1>Extension privacy notice</h1>
+    <p class="updated">Last updated: October 10, 2026</p>
+
+    <p class="notice">The Anugya Satyapak Quick Check extension processes contract text locally in the Chrome popup. It does not send the text, page contents, or browsing history to Anugya Satyapak or another review service.</p>
+
+    <h2>Information the extension handles</h2>
+    <p>The extension handles text you select on a webpage, text you type or paste into its popup, and—only after you choose <strong>Read visible page</strong>—readable text shown on the current page. When you open the extension popup, it attempts to capture the text you have selected. The extension does not collect or store the page URL, browsing history, account details, or passwords.</p>
+
+    <h2>How the text is used</h2>
+    <p>The text stays temporarily in the open extension popup while the local English pattern scan creates a short report. The extension does not transmit the text to a server, use an AI provider, or save it to extension storage. Closing the popup discards the draft and report.</p>
+
+    <h2>Copying text to the website</h2>
+    <p>If you choose <strong>Copy text</strong>, the extension writes the text to your device’s clipboard so you can paste it yourself into the Anugya Satyapak website. Opening the website does not transfer text automatically. The extension does not control what happens to text after you paste it into the separate website.</p>
+
+    <h2>Sharing, analytics, and remote code</h2>
+    <p>The extension does not share the text with Anugya Satyapak or third parties. It has no analytics, advertising, tracking, remote scripts, or review API connection.</p>
+
+    <h2>Permissions</h2>
+    <ul>
+      <li><strong>activeTab:</strong> lets the extension access the current tab after you open its popup.</li>
+      <li><strong>scripting:</strong> reads the selected text when the popup opens and reads visible page text only when you choose that action.</li>
+      <li><strong>clipboardWrite:</strong> writes text to the clipboard only when you choose <strong>Copy text</strong>.</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>For questions or privacy requests, use the project’s <a href="https://github.com/0blisake/Anugya-Satyapak/issues">GitHub support page</a>. Do not include contract text or personal information in a public issue.</p>
+
+    <footer><a href="./">Return to Anugya Satyapak</a></footer>
+  </main>
+</body>
+</html>
