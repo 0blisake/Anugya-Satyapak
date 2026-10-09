@@ -75,19 +75,38 @@ The local frontend proxies `/api` requests to `http://127.0.0.1:8000`. Photo and
 
 OpenAI API usage may incur charges. Keep API keys in the backend environment only; never put them in frontend files, `VITE_*` variables, the extension, or the repository. If AI is not configured, the API can still use the rules-based fallback.
 
-## Deploy the API for the online website
+## Free temporary API for the online demo
 
-GitHub Pages hosts the static frontend; file extraction and review require a separately hosted API. This repository includes a Render Blueprint and a backend Dockerfile. The image installs both `pytesseract` and the native Tesseract English OCR engine required for photo and scanned-PDF extraction.
+GitHub Pages hosts the static frontend, so it cannot run the Python OCR API. For a no-hosting-fee hackathon demo, run the API on your own computer and expose it temporarily with a Cloudflare Quick Tunnel. Quick Tunnels need no Cloudflare account or domain, but the URL is temporary and stops working when the tunnel process closes. Anyone who has the URL can reach the API, so use non-confidential sample documents and keep the tunnel open only for the demo. See [Cloudflare Quick Tunnel instructions](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
 
-1. Push the repository to GitHub, then sign in to Render and choose **New → Blueprint**.
-2. Connect `0blisake/Anugya-Satyapak` and select the repository's `render.yaml`. Render will build and start the API service.
-3. When the service is live, open `https://<your-api-host>/api/health`. Confirm it returns `"status":"ok"` and `"ocr_available":true`. Use the service's HTTPS origin (without `/api`) in the next step.
-4. In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables**, then add a repository variable named `VITE_API_BASE_URL` with the API origin, such as `https://anugya-satyapak-api.onrender.com`.
-5. Re-run **Build and deploy Anugya Satyapak to GitHub Pages** from the **Actions** tab, or push a new commit to `main`. The workflow rebuilds the frontend with that API address.
+### One-time setup
 
-The Render Blueprint allows the GitHub Pages origin `https://0blisake.github.io` and both local Vite origins. If the published site uses a different origin, update `ANUGYA_SATYAPAK_ALLOWED_ORIGINS` in the Render service environment to include the website's origin, then redeploy.
+1. Install Python and the Windows Tesseract OCR application. The Python package `pytesseract` is only a wrapper; the Tesseract program and its English (`eng`) language data must be installed and available on PATH. Tesseract's project points Windows users to the [UB Mannheim Windows builds](https://github.com/UB-Mannheim/tesseract/wiki). After installation, open a new terminal and confirm `tesseract --version` works.
+2. Install `cloudflared` from [Cloudflare's downloads page](https://developers.cloudflare.com/tunnel/downloads/). Confirm `cloudflared --version` works in a new terminal.
+3. Follow **Run the API (optional)** above. Copy `backend/.env.example` to `backend/.env`; it already allows the GitHub Pages origin `https://0blisake.github.io` and local Vite origins. Keep any API key in this ignored local `.env` file.
+4. Push the latest project commit to GitHub.
 
-Photo extraction works without an AI key. To enable AI review, set `OPENAI_API_KEY` and an account-enabled `OPENAI_MODEL` in the Render service's environment settings. Keep the key there; do not put it in GitHub variables, the frontend, the extension, or this repository. Render injects dashboard environment variables into the service at runtime; see [Render's environment-variable guidance](https://render.com/docs/configure-environment-variables).
+### Each demo session
+
+1. In a terminal, start the backend from the `backend` folder:
+
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
+   python -m uvicorn app.main:app --port 8000
+   ```
+
+2. In another terminal, confirm `http://127.0.0.1:8000/api/health` returns `"status":"ok"` and `"ocr_available":true`.
+3. In a third terminal, start the temporary tunnel:
+
+   ```powershell
+   cloudflared tunnel --url http://localhost:8000
+   ```
+
+   Copy the HTTPS `trycloudflare.com` address it prints.
+4. In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables**. Create or update the repository variable `VITE_API_BASE_URL` with that HTTPS address, without a trailing slash or `/api`.
+5. In **Actions**, rerun **Build and deploy Anugya Satyapak to GitHub Pages**. Once it completes, reload the website and try a sample screenshot.
+
+Keep both the backend and tunnel terminals open, and keep your computer awake and connected to the internet while judges use the site. The Quick Tunnel URL changes after it is stopped and restarted; when that happens, update `VITE_API_BASE_URL` and rerun the Pages workflow. Photo OCR works without an OpenAI key. If you enable AI review with a key in `backend/.env`, remember that the tunnel makes the API publicly reachable during the demo.
 
 ## Load the Chrome extension
 
