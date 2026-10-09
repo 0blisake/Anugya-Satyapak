@@ -1,0 +1,6 @@
+.env
+.venv/
+.pip-tmp/
+__pycache__/
+*.py[cod]
+examples/

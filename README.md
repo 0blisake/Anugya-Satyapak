@@ -75,6 +75,20 @@ The local frontend proxies `/api` requests to `http://127.0.0.1:8000`. Photo and
 
 OpenAI API usage may incur charges. Keep API keys in the backend environment only; never put them in frontend files, `VITE_*` variables, the extension, or the repository. If AI is not configured, the API can still use the rules-based fallback.
 
+## Deploy the API for the online website
+
+GitHub Pages hosts the static frontend; file extraction and review require a separately hosted API. This repository includes a Render Blueprint and a backend Dockerfile. The image installs both `pytesseract` and the native Tesseract English OCR engine required for photo and scanned-PDF extraction.
+
+1. Push the repository to GitHub, then sign in to Render and choose **New → Blueprint**.
+2. Connect `0blisake/Anugya-Satyapak` and select the repository's `render.yaml`. Render will build and start the API service.
+3. When the service is live, open `https://<your-api-host>/api/health`. Confirm it returns `"status":"ok"` and `"ocr_available":true`. Use the service's HTTPS origin (without `/api`) in the next step.
+4. In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables**, then add a repository variable named `VITE_API_BASE_URL` with the API origin, such as `https://anugya-satyapak-api.onrender.com`.
+5. Re-run **Build and deploy Anugya Satyapak to GitHub Pages** from the **Actions** tab, or push a new commit to `main`. The workflow rebuilds the frontend with that API address.
+
+The Render Blueprint allows the GitHub Pages origin `https://0blisake.github.io` and both local Vite origins. If the published site uses a different origin, update `ANUGYA_SATYAPAK_ALLOWED_ORIGINS` in the Render service environment to include the website's origin, then redeploy.
+
+Photo extraction works without an AI key. To enable AI review, set `OPENAI_API_KEY` and an account-enabled `OPENAI_MODEL` in the Render service's environment settings. Keep the key there; do not put it in GitHub variables, the frontend, the extension, or this repository. Render injects dashboard environment variables into the service at runtime; see [Render's environment-variable guidance](https://render.com/docs/configure-environment-variables).
+
 ## Load the Chrome extension
 
 The extension is an unpacked desktop Chrome prototype and is not currently distributed through the Chrome Web Store.
