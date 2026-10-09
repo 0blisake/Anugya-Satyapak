@@ -3,8 +3,8 @@ import { demoReport } from './mockReport'
 import type { ApiHealth, ExtractionResult, Finding, Report } from './types'
 
 type Locale = 'en' | 'hi'
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-const apiUrl = (path: string) => `${API_BASE_URL}${path}`
+const IS_LOCAL_APP = import.meta.env.DEV
+const apiUrl = (path: string) => path
 const MAX_FILE_BYTES = 12 * 1024 * 1024
 const MAX_BATCH_BYTES = 30 * 1024 * 1024
 const MAX_BATCH_FILES = 10
@@ -16,14 +16,17 @@ const copy = {
   en: {
     navSummary: 'Summary', navContact: 'Contact', jurisdiction: 'Reviewing for', language: 'Language',
     eyebrow: 'A clearer look at the fine print', headline: 'Know what you’re agreeing to.',
-    intro: 'Drop in a contract. We’ll surface the terms that could affect your money, choices, or rights—in language that makes sense.',
+    intro: 'Paste contract text for a first-pass scan that runs in your browser. PDF and photo review is available in the local version on your laptop.',
+    localIntro: 'Paste text, or extract a PDF or photos with the service running on this laptop. Review uses prototype rules unless you configure AI.',
     uploadTitle: 'Start with your contract', uploadHint: 'One PDF or text file, or up to 10 screenshots · 12 MB each / 30 MB total', browse: 'Choose files', pasteTab: 'Paste text', uploadTab: 'Upload file(s)',
     batchHint: 'For screenshots, select them in page order. You can reorder them below.', prepare: 'Extract text for review', preparing: 'Reading your file(s)…', reExtract: 'Extract again', extractedTitle: 'Check the extracted text', extractedHint: 'OCR can make mistakes. Correct the text here before reviewing it.',
-    pages: 'pages', moveUp: 'Move page up', moveDown: 'Move page down', clearFiles: 'Clear files', ocrUnavailable: 'Photo and scanned-page OCR is not ready on this API:', fileOffline: 'The analysis API is offline. Pasted text and TXT/MD files can still use the browser’s basic scan; PDFs and photos need the API.',
+    pages: 'pages', moveUp: 'Move page up', moveDown: 'Move page down', clearFiles: 'Clear files', ocrUnavailable: 'Photo and scanned-page OCR is not ready on this laptop:', fileOffline: 'The local file service is not running. Start it on this laptop; text review still works in your browser.',
+    publicFilesNote: 'PDF and photo review runs locally from your laptop. This public page does not upload your pasted text.', publicFilesLink: 'See the local setup guide',
     drop: 'Drop a contract or screenshots here', or: 'or', pastePlaceholder: 'Paste the terms and conditions here…', analyze: 'Review contract', analyzing: 'Reviewing your contract…',
     sample: 'Explore a sample report', sampleHint: 'See what a review looks like with a fictional subscription agreement.',
     looksFor: 'What we look for', lookOne: 'Renewals, cancellation & lock-in', lookTwo: 'Extra fees, penalties & refunds', lookThree: 'Changes, disputes & liability',
-    privacy: 'Prototype notice', privacyText: 'When the API is offline, pasted text uses a browser rule scan. File extraction sends selected files to the API. With AI enabled, corrected contract text is forwarded to OpenAI for analysis. Use only documents you are permitted to share; hosting and provider terms apply.',
+    privacy: 'Prototype notice', privacyPublicText: 'Public text review runs in this browser; pasted text is not sent to a server. This is an English-focused pattern scan and can miss clauses. PDF and photo review is available in the private local version.',
+    privacyLocalText: 'When the local API is running, files and pasted text are sent to it on this laptop for review. If you configure AI, corrected text is sent to OpenAI only after you consent. Use documents you are permitted to process.',
     resultEyebrow: 'Your contract review', quick: 'Quick read', full: 'Detailed findings', sources: 'Sources & citations',
     download: 'Download report', print: 'Print / save PDF', found: 'items to review', allClear: 'No matching clauses were detected by this prototype scan.',
     original: 'Original clause', plain: 'In plain language', why: 'Why it may matter', next: 'What you can check', page: 'Page',
@@ -36,20 +39,23 @@ const copy = {
     lawyerTitle: 'Need advice for your situation?', lawyerText: 'A qualified lawyer can review the full contract and explain your options. Lawyer matching is not live in this prototype.',
     lawyerButton: 'Lawyer referrals coming soon', contactTitle: 'Contact the team', contactText: 'Questions or feedback? Contact details will be added before the public demo.',
     footerLine: 'Understand the terms. Make your own decision.', scanMode: 'Prototype scan', demoMode: 'Sample report', loadingError: 'Could not reach the analysis service.',
-    backendHint: 'Start the API to extract PDFs and photos. You can also paste text or use the sample report.', remove: 'Remove file',
-    apiReady: 'AI review ready', apiRules: 'Rules-based mode', apiAiNoOcr: 'AI ready · OCR unavailable', apiRulesNoOcr: 'Rules mode · OCR unavailable', apiDemo: 'Demo mode',
+    backendHint: 'Start the local service on this laptop to extract PDFs and photos. You can also paste text or use the sample report.', remove: 'Remove file',
+    apiReady: 'AI review ready', apiRules: 'Rules-based mode', apiAiNoOcr: 'AI ready · OCR unavailable', apiRulesNoOcr: 'Rules mode · OCR unavailable', apiDemo: 'Local API offline', publicMode: 'Browser text mode', publicTextMeta: 'Your text stays in this browser · English-focused pattern scan', localTextMeta: 'Text is reviewed locally unless optional AI is enabled',
   },
   hi: {
     navSummary: 'सारांश', navContact: 'संपर्क', jurisdiction: 'समीक्षा क्षेत्र', language: 'भाषा',
     eyebrow: 'छोटी लिखावट को स्पष्ट रूप से समझें', headline: 'जानें कि आप किन शर्तों से सहमत हो रहे हैं।',
-    intro: 'समझौता अपलोड करें। हम उन शर्तों को सामने लाएँगे जो आपके पैसे, विकल्पों या अधिकारों को प्रभावित कर सकती हैं—सरल भाषा में।',
+    intro: 'पहली जाँच के लिए समझौते का टेक्स्ट पेस्ट करें; समीक्षा इसी ब्राउज़र में होगी। PDF और फोटो की समीक्षा आपके लैपटॉप पर चलने वाले स्थानीय संस्करण में उपलब्ध है।',
+    localIntro: 'टेक्स्ट पेस्ट करें या इस लैपटॉप पर चलने वाली सेवा से PDF और फोटो का टेक्स्ट निकालें। AI सेट न करने पर समीक्षा प्रोटोटाइप नियमों से होगी।',
     uploadTitle: 'अपने समझौते से शुरू करें', uploadHint: 'एक PDF या टेक्स्ट फ़ाइल, या अधिकतम 10 स्क्रीनशॉट · हर फ़ाइल 12 MB, कुल 30 MB तक', browse: 'फ़ाइलें चुनें', pasteTab: 'टेक्स्ट पेस्ट करें', uploadTab: 'फ़ाइलें अपलोड करें',
     batchHint: 'स्क्रीनशॉट को पेज के क्रम में चुनें। नीचे उनका क्रम बदला जा सकता है।', prepare: 'समीक्षा के लिए टेक्स्ट निकालें', preparing: 'फ़ाइलें पढ़ रहे हैं…', reExtract: 'फिर से टेक्स्ट निकालें', extractedTitle: 'निकाले गए टेक्स्ट की जाँच करें', extractedHint: 'OCR में गलती हो सकती है। समीक्षा से पहले यहाँ टेक्स्ट ठीक करें।',
-    pages: 'पृष्ठ', moveUp: 'पृष्ठ ऊपर ले जाएँ', moveDown: 'पृष्ठ नीचे ले जाएँ', clearFiles: 'फ़ाइलें हटाएँ', ocrUnavailable: 'इस API पर फोटो और स्कैन किए गए पेज का OCR उपलब्ध नहीं है:', fileOffline: 'विश्लेषण API ऑफ़लाइन है। पेस्ट किया टेक्स्ट और TXT/MD फ़ाइलें ब्राउज़र स्कैन से जाँची जा सकती हैं; PDF और फोटो के लिए API चाहिए।',
+    pages: 'पृष्ठ', moveUp: 'पृष्ठ ऊपर ले जाएँ', moveDown: 'पृष्ठ नीचे ले जाएँ', clearFiles: 'फ़ाइलें हटाएँ', ocrUnavailable: 'इस लैपटॉप पर फोटो और स्कैन किए गए पेज का OCR उपलब्ध नहीं है:', fileOffline: 'स्थानीय फ़ाइल सेवा नहीं चल रही। इसे इस लैपटॉप पर शुरू करें; टेक्स्ट की समीक्षा ब्राउज़र में फिर भी हो सकती है।',
+    publicFilesNote: 'PDF और फोटो की समीक्षा आपके लैपटॉप पर स्थानीय रूप से होती है। यह सार्वजनिक पेज पेस्ट किए गए टेक्स्ट को अपलोड नहीं करता।', publicFilesLink: 'स्थानीय सेटअप निर्देश देखें',
     drop: 'समझौता या स्क्रीनशॉट यहाँ छोड़ें', or: 'या', pastePlaceholder: 'नियम और शर्तें यहाँ पेस्ट करें…', analyze: 'समझौते की समीक्षा करें', analyzing: 'समीक्षा कर रहे हैं…',
     sample: 'नमूना रिपोर्ट देखें', sampleHint: 'काल्पनिक सब्सक्रिप्शन समझौते की समीक्षा का उदाहरण देखें।',
     looksFor: 'हम क्या देखते हैं', lookOne: 'नवीनीकरण, रद्दीकरण और लॉक-इन', lookTwo: 'अतिरिक्त शुल्क, जुर्माना और रिफंड', lookThree: 'बदलाव, विवाद और ज़िम्मेदारी',
-    privacy: 'प्रोटोटाइप सूचना', privacyText: 'API ऑफ़लाइन होने पर पेस्ट किया गया पाठ ब्राउज़र के नियम-आधारित स्कैन से जाँचा जाता है। फ़ाइल निकालने के लिए चुनी गई फ़ाइलें API पर भेजी जाती हैं। AI चालू होने पर सुधारा गया समझौता-पाठ विश्लेषण के लिए OpenAI को भेजा जाता है। केवल वही दस्तावेज़ साझा करें जिन्हें भेजने की अनुमति आपके पास है; होस्ट और प्रदाता की शर्तें लागू होती हैं।',
+    privacy: 'प्रोटोटाइप सूचना', privacyPublicText: 'सार्वजनिक टेक्स्ट समीक्षा इसी ब्राउज़र में होती है; पेस्ट किया गया टेक्स्ट सर्वर पर नहीं भेजा जाता। यह मुख्यतः अंग्रेज़ी शब्दों पर आधारित पैटर्न स्कैन है और शर्तें छूट सकती हैं। PDF और फोटो की समीक्षा स्थानीय संस्करण में उपलब्ध है।',
+    privacyLocalText: 'स्थानीय API चलने पर फ़ाइलें और पेस्ट किया गया टेक्स्ट समीक्षा के लिए इसी लैपटॉप पर भेजे जाते हैं। AI सेट करने पर सुधारा गया टेक्स्ट आपकी सहमति के बाद ही OpenAI को भेजा जाता है। केवल वही दस्तावेज़ इस्तेमाल करें जिन्हें प्रोसेस करने की अनुमति आपके पास है।',
     resultEyebrow: 'आपके समझौते की समीक्षा', quick: 'संक्षिप्त जानकारी', full: 'विस्तृत निष्कर्ष', sources: 'स्रोत और उद्धरण',
     download: 'रिपोर्ट डाउनलोड करें', print: 'प्रिंट / PDF सेव करें', found: 'जाँचने योग्य बातें', allClear: 'इस प्रोटोटाइप स्कैन में कोई मेल खाती शर्त नहीं मिली।',
     original: 'मूल शर्त', plain: 'सरल भाषा में', why: 'यह क्यों मायने रख सकता है', next: 'आप क्या जाँच सकते हैं', page: 'पृष्ठ',
@@ -62,8 +68,8 @@ const copy = {
     lawyerTitle: 'अपनी स्थिति पर सलाह चाहिए?', lawyerText: 'योग्य वकील पूरे समझौते की समीक्षा कर आपके विकल्प समझा सकते हैं। इस प्रोटोटाइप में वकील से मिलान की सुविधा उपलब्ध नहीं है।',
     lawyerButton: 'वकील रेफ़रल जल्द उपलब्ध होंगे', contactTitle: 'टीम से संपर्क करें', contactText: 'सवाल या सुझाव? सार्वजनिक डेमो से पहले संपर्क विवरण जोड़े जाएँगे।',
     footerLine: 'शर्तें समझें। अपना निर्णय स्वयं लें।', scanMode: 'प्रोटोटाइप स्कैन', demoMode: 'नमूना रिपोर्ट', loadingError: 'विश्लेषण सेवा से संपर्क नहीं हो सका।',
-    backendHint: 'PDF और फोटो से टेक्स्ट निकालने के लिए API शुरू करें। आप टेक्स्ट पेस्ट कर सकते हैं या नमूना रिपोर्ट देख सकते हैं।', remove: 'फ़ाइल हटाएँ',
-    apiReady: 'AI समीक्षा उपलब्ध', apiRules: 'नियम-आधारित मोड', apiAiNoOcr: 'AI उपलब्ध · OCR नहीं', apiRulesNoOcr: 'नियम मोड · OCR नहीं', apiDemo: 'डेमो मोड',
+    backendHint: 'PDF और फोटो से टेक्स्ट निकालने के लिए इस लैपटॉप पर स्थानीय सेवा शुरू करें। आप टेक्स्ट पेस्ट कर सकते हैं या नमूना रिपोर्ट देख सकते हैं।', remove: 'फ़ाइल हटाएँ',
+    apiReady: 'AI समीक्षा उपलब्ध', apiRules: 'नियम-आधारित मोड', apiAiNoOcr: 'AI उपलब्ध · OCR नहीं', apiRulesNoOcr: 'नियम मोड · OCR नहीं', apiDemo: 'स्थानीय API बंद है', publicMode: 'ब्राउज़र टेक्स्ट मोड', publicTextMeta: 'आपका टेक्स्ट इसी ब्राउज़र में रहता है · अंग्रेज़ी पैटर्न स्कैन', localTextMeta: 'वैकल्पिक AI चालू न हो तो समीक्षा स्थानीय रूप से होती है',
   },
 }
 
@@ -180,7 +186,7 @@ function downloadReport(report: Report) {
 
 function App() {
   const [locale, setLocale] = useState<Locale>('en')
-  const [inputMode, setInputMode] = useState<'file' | 'text'>('file')
+  const [inputMode, setInputMode] = useState<'file' | 'text'>(IS_LOCAL_APP ? 'file' : 'text')
   const [files, setFiles] = useState<File[]>([])
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null)
   const [extractedText, setExtractedText] = useState('')
@@ -201,6 +207,7 @@ function App() {
   const isHi = locale === 'hi'
 
   useEffect(() => {
+    if (!IS_LOCAL_APP) return
     let active = true
     fetch(apiUrl('/api/health'))
       .then(async (response) => {
@@ -434,7 +441,7 @@ function App() {
           <div className="hero-copy">
             <div className="eyebrow"><span className="eyebrow-dot" />{t.eyebrow}</div>
             <h1>{t.headline}</h1>
-            <p className="hero-intro">{t.intro}</p>
+            <p className="hero-intro">{IS_LOCAL_APP ? t.localIntro : t.intro}</p>
             <div className="trust-row"><span><Icon name="shield" size={17} /> Prototype · no account</span><span><Icon name="check" size={17} /> Original wording preserved</span></div>
           </div>
           <div className="hero-note"><span className="note-spark"><Icon name="spark" size={18} /></span><p>Important terms shouldn’t hide in the fine print.</p><span className="note-caption">A first-pass review, in plain language.</span></div>
@@ -444,13 +451,13 @@ function App() {
           <div className="upload-panel panel">
             <div className="panel-heading">
               <div><span className="step-label">01 / START HERE</span><h2>{t.uploadTitle}</h2></div>
-              <div className={`api-status ${backendReady ? 'api-online' : ''}`} title={backendReady ? [aiMessage, ocrAvailable === false ? ocrMessage : ''].filter(Boolean).join(' ') : undefined}><span />{!backendReady ? t.apiDemo : aiAvailable ? (ocrAvailable === false ? t.apiAiNoOcr : t.apiReady) : (ocrAvailable === false ? t.apiRulesNoOcr : t.apiRules)}</div>
+              <div className={`api-status ${!IS_LOCAL_APP || backendReady ? 'api-online' : ''}`} title={IS_LOCAL_APP && backendReady ? [aiMessage, ocrAvailable === false ? ocrMessage : ''].filter(Boolean).join(' ') : undefined}><span />{!IS_LOCAL_APP ? t.publicMode : !backendReady ? t.apiDemo : aiAvailable ? (ocrAvailable === false ? t.apiAiNoOcr : t.apiReady) : (ocrAvailable === false ? t.apiRulesNoOcr : t.apiRules)}</div>
             </div>
-            <div className="input-tabs" role="tablist" aria-label="Contract input type">
+            {IS_LOCAL_APP && <div className="input-tabs" role="tablist" aria-label="Contract input type">
               <button className={inputMode === 'file' ? 'active' : ''} role="tab" aria-selected={inputMode === 'file'} disabled={busy} onClick={() => { setInputMode('file'); setAiConsent(false); setError('') }}><Icon name="upload" size={16} />{t.uploadTab}</button>
               <button className={inputMode === 'text' ? 'active' : ''} role="tab" aria-selected={inputMode === 'text'} disabled={busy} onClick={() => { setInputMode('text'); setAiConsent(false); setError('') }}><Icon name="file" size={16} />{t.pasteTab}</button>
-            </div>
-            {inputMode === 'file' ? <>
+            </div>}
+            {IS_LOCAL_APP && inputMode === 'file' ? <>
               {fileInput}
               <div className={`dropzone ${dragging ? 'dragging' : ''} ${files.length ? 'has-file' : ''}`} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop}>
                 {files.length ? <>
@@ -490,9 +497,10 @@ function App() {
             </> : <>
               <label className="visually-hidden" htmlFor="contract-text">Paste contract text</label>
               <textarea id="contract-text" className="contract-textarea" placeholder={t.pastePlaceholder} value={text} onChange={(event) => { setText(event.target.value); setAiConsent(false); setReport(null) }} maxLength={MAX_TEXT_CHARS} disabled={busy} />
-              <div className="text-meta"><span>{text.trim() ? `${text.trim().split(/\s+/).length} words · ${text.length.toLocaleString()} characters` : 'Your text stays in this browser in demo mode'}</span><span>Up to {MAX_TEXT_CHARS.toLocaleString()} characters</span></div>
+              <div className="text-meta"><span>{text.trim() ? `${text.trim().split(/\s+/).length} words · ${text.length.toLocaleString()} characters` : IS_LOCAL_APP ? t.localTextMeta : t.publicTextMeta}</span><span>Up to {MAX_TEXT_CHARS.toLocaleString()} characters</span></div>
               {backendReady && aiAvailable && <label className="ai-consent"><input type="checkbox" checked={aiConsent} onChange={(event) => setAiConsent(event.target.checked)} /><span>{t.aiConsent}</span></label>}
               <button className="primary-button full-button" onClick={analyze} disabled={busy || !text.trim()}>{busy ? <><span className="spinner" />{t.analyzing}</> : <>{t.analyze}<Icon name="arrow" size={17} /></>}</button>
+              {!IS_LOCAL_APP && <div className="inline-notice local-files-notice"><Icon name="shield" size={16} /><span>{t.publicFilesNote} <a href="https://github.com/0blisake/Anugya-Satyapak#run-the-private-local-file-review">{t.publicFilesLink}</a></span></div>}
             </>}
             {error && <div className="error-message" role="alert"><Icon name="shield" size={17} />{error}</div>}
             <div className="demo-callout">
@@ -508,7 +516,7 @@ function App() {
               <ul className="look-list"><li><span>01</span>{t.lookOne}</li><li><span>02</span>{t.lookTwo}</li><li><span>03</span>{t.lookThree}</li></ul>
               <div className="coverage-note"><span className="coverage-line" />Focused on everyday consumer terms</div>
             </div>
-            <div className="privacy-card"><div className="privacy-heading"><Icon name="shield" size={18} /><strong>{t.privacy}</strong></div><p>{t.privacyText}</p><div className="privacy-foot"><span className="privacy-dot" />No account required</div></div>
+            <div className="privacy-card"><div className="privacy-heading"><Icon name="shield" size={18} /><strong>{t.privacy}</strong></div><p>{IS_LOCAL_APP ? t.privacyLocalText : t.privacyPublicText}</p><div className="privacy-foot"><span className="privacy-dot" />No account required</div></div>
           </aside>
         </section>
 
