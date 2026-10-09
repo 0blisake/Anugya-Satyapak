@@ -6,31 +6,30 @@ Anugya Satyapak is a hackathon prototype for helping Indian consumers make a fir
 
 > This is an issue-spotting prototype, not a lawyer or a legal decision system. It can miss important clauses, misread context, and show incomplete references. A clean report does not mean a contract is safe.
 
-[Open the public text prototype](https://0blisake.github.io/Anugya-Satyapak/) · [Browse the source](https://github.com/0blisake/Anugya-Satyapak) · [Report an issue](https://github.com/0blisake/Anugya-Satyapak/issues)
+[Open the public prototype](https://0blisake.github.io/Anugya-Satyapak/) · [Browse the source](https://github.com/0blisake/Anugya-Satyapak) · [Report an issue](https://github.com/0blisake/Anugya-Satyapak/issues)
 
 ## Two ways to use the prototype
 
 | Version | Available features | Where the review runs |
 |---|---|---|
-| Public website | Paste contract text, run a rules-based scan, view the sample report | In the visitor's browser; pasted text is not sent to an Anugya Satyapak API |
-| Private local version | Paste text or extract PDFs, scanned PDFs, and photos; correct extracted text before review | The file extraction API runs on the user's own laptop |
+| Public website | Paste text or upload text files, PDFs, scanned PDFs, and screenshots; correct extracted text, run the scan, view or download the report | Text extraction, OCR, and the rules-based review run in the visitor's browser; contract content is not sent to an Anugya Satyapak server |
+| Optional local API | Run AI-assisted analysis from a local development session after configuring a provider and consenting | Corrected text is sent to the API on the user's laptop, then to the configured AI provider only after consent |
 
-The public website is static and does not call a hosted review API. Its text scan is a limited, English-focused pattern scan; it does not provide AI analysis and may miss indirect wording. The local version can use the same rules-based review. AI is an optional local setting that requires the user's own API key and explicit consent before sending corrected text to the configured provider.
+The public website is static and does not call a hosted review API. Selectable PDF text is read in the browser with PDF.js; screenshots and scanned PDF pages use Tesseract.js OCR in the browser. First OCR use downloads the OCR engine and English/Hindi language data from public CDNs. Contract files and extracted text are not uploaded to those CDNs. OCR needs an internet connection the first time; digital PDFs with selectable text do not need OCR. The scan remains a limited, English-focused pattern checker, does not provide AI analysis on GitHub Pages, and may miss indirect wording. AI is optional for local development and requires a configured API key and explicit consent before text is sent to the chosen provider.
 
 The interface uses a paper-inspired cream background and botanical greens, with blue and lime accents. Brand assets live in [frontend/public/brand/](frontend/public/brand/); see the [logo instructions](frontend/public/brand/README.md).
 
-## Run the private local file review
+## Run the optional local AI review
 
-The GitHub Pages site does not accept file uploads. To review PDFs or photos, run the frontend and API on your laptop. Files are sent to the API at `127.0.0.1` on that same laptop; they are not sent to a hosted Anugya Satyapak server.
+The GitHub Pages site already supports file uploads and browser-based extraction. You do not need to install Python, Tesseract, or run a backend to use it. Run the local API only if you want to work on the project locally or try its optional AI-assisted analysis. In local development, the frontend extracts files in the browser and sends corrected text to the API at `127.0.0.1` only when you start a review.
 
 ### Requirements
 
 - Node.js 20.19+ (or 22.12+) and npm
 - Python 3.10+
-- Tesseract OCR for photos and scanned PDF pages, with English (`eng`) language data
 - Internet access for installing project dependencies
 
-Tesseract's Windows builds are provided by [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki). Add its installation folder to the Windows `PATH` if the installer does not do this. Digital PDFs with selectable text do not need OCR; scanned pages and photos do.
+Browser OCR downloads Tesseract's engine and English/Hindi language data from public CDNs on first use. The contract itself remains in the browser. The local backend still contains a separate OCR endpoint, but the website's upload flow does not depend on it.
 
 ### One-time setup on Windows
 
@@ -45,7 +44,7 @@ In the first window, install the frontend dependencies:
 
 ```powershell
 cd frontend
-npm ci
+npm ci --ignore-scripts
 ```
 
 In the second window, set up the local API:
@@ -57,7 +56,7 @@ python -m venv .venv
 if (!(Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-No AI key is needed for local file extraction or rules-based review. Keep the generated `backend/.env` private and do not commit it.
+No AI key is needed for browser-based file extraction or rules-based review. Keep the generated `backend/.env` private and do not commit it.
 
 ### Start a local review session
 
@@ -73,11 +72,9 @@ No AI key is needed for local file extraction or rules-based review. Keep the ge
    npm run dev
    ```
 
-3. Open the local address printed by Vite, normally [http://localhost:5173](http://localhost:5173). The local version shows the file upload tab and sends files to the API running on your laptop.
+3. Open the local address printed by Vite, normally [http://localhost:5173](http://localhost:5173). Uploads are extracted in the browser. If the local API is running, corrected text can be sent to it for optional AI-assisted review; otherwise, the browser rules scan is used.
 
-Keep both windows open while using the local version. To stop the services, press Ctrl+C in each window.
-
-After installing Tesseract, open a new terminal and confirm that `tesseract --version` works and `tesseract --list-langs` includes `eng`. The local API's [health page](http://127.0.0.1:8000/api/health) reports whether OCR is ready.
+Keep the API window open only when using the optional local API. To stop it, press Ctrl+C in that window. Stop Vite in the other window when finished.
 
 ### Optional AI review
 
@@ -85,7 +82,7 @@ The local API can use AI if you add your own `OPENAI_API_KEY` and supported `OPE
 
 ## Load the Chrome extension
 
-The extension is an unpacked desktop Chrome prototype and is not currently distributed through the Chrome Web Store. It remains a separate feature from the public website's browser-only text scan.
+The extension is an unpacked desktop Chrome prototype and is not currently distributed through the Chrome Web Store. It remains a separate, quick-check feature from the website's full browser-based PDF/photo review.
 
 1. Start the local API using the steps above.
 2. In desktop Chrome, open `chrome://extensions` and turn on **Developer mode**.
@@ -99,8 +96,8 @@ The quick review is limited to 40,000 characters and shows a compact result. See
 
 | Part | Implementation |
 |---|---|
-| Public website | React, TypeScript, and Vite static frontend; browser-based pattern scan for pasted text |
-| Local file review | FastAPI extraction and analysis endpoints in `backend/`; the local Vite server proxies requests to the API |
+| Public website | React, TypeScript, and Vite; PDF.js text extraction, Tesseract.js OCR, editable text review, and browser-based pattern scan |
+| Optional local API | FastAPI analysis and extraction endpoints in `backend/`; the local Vite server proxies analysis requests to the API |
 | AI review | Optional OpenAI-compatible Responses API adapter with quote validation in `backend/app/ai_review.py` |
 | Legal references | Small curated seed in `backend/data/legal_sources.json`; coverage is limited and requires legal review |
 | Browser extension | Chrome Manifest V3 quick-check flow in `extension/` |
@@ -111,8 +108,8 @@ More detail: [project scope and requirements cross-check](ANUGYA-SATYAPAK-PROJEC
 ## Prototype boundaries and data handling
 
 - The public rules scan looks for a limited set of English wording patterns. It does not understand every unusual or indirect clause, and it does not determine whether a term is fair, enforceable, or unlawful.
-- Public pasted text is scanned in the visitor's browser. The website does not submit it to an Anugya Satyapak backend.
-- In the local version, files and pasted text are sent to the API running on the same laptop for review. OCR can introduce errors; compare extracted passages against the source document.
+- Public pasted text, uploaded files, and OCR are processed in the visitor's browser. The website does not submit contract content to an Anugya Satyapak backend. OCR engine and language assets come from public CDNs on first use.
+- In local development, corrected text is sent to the API running on the same laptop if it is available. OCR can introduce errors; compare extracted passages against the source document.
 - AI is off by default. If enabled in the local API, text is sent to the configured AI provider only after the user consents. Provider terms, logs, and retention settings apply.
 - Citations come only from a small curated source list. An absent citation does not mean no law applies.
 - Do not submit confidential or sensitive contracts to an AI provider unless you have reviewed its terms and data handling.
@@ -120,6 +117,6 @@ More detail: [project scope and requirements cross-check](ANUGYA-SATYAPAK-PROJEC
 
 ## Project status
 
-This repository is a hackathon prototype. It includes public browser-based text scanning, private local file intake, English and Hindi interface options, a rules-based fallback, an optional AI-assisted path, a sample report, and a Chrome quick-check extension. The AI pipeline, legal source list, OCR quality, and live browser-extension flow need real-world evaluation before the project can support public-use claims.
+This repository is a hackathon prototype. It includes public browser-based PDF and image extraction, English/Hindi OCR, an English-focused rules scan, English and Hindi interface options, an optional local AI-assisted path, a sample report, and a Chrome quick-check extension. The AI pipeline, legal source list, OCR quality, and live browser-extension flow need real-world evaluation before the project can support public-use claims.
 
 There is no `LICENSE` file in this repository yet. Until a license is added, assume the source is shared for viewing and that reuse is not granted by default.

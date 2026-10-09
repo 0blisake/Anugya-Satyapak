@@ -31,7 +31,8 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci --no-audit --no-fund
+        # Tesseract.js has an optional donation-banner postinstall; the frontend needs no install scripts.
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Build frontend
         working-directory: frontend

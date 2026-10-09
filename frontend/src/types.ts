@@ -51,12 +51,4 @@ export type ApiHealth = {
   mode: string
   ai_available: boolean
   ai_message: string
-  ocr_available: boolean
-  ocr_message: string
-  limits: {
-    file_bytes: number
-    batch_bytes: number
-    batch_files: number
-    text_characters: number
-  }
 }

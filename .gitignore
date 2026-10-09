@@ -1,6 +1,11 @@
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.codex-npm-temp/
+frontend/.npm-cache/
+frontend/.pnpm-store/
+frontend/pnpm-lock.yaml
+frontend/pnpm-workspace.yaml
 
 # Python
 backend/.venv/

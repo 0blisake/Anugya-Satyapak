@@ -12,7 +12,7 @@ This is a Manifest V3 unpacked Chrome extension for quick, user-triggered checks
 6. Optionally enter the full-review website URL, such as the GitHub Pages URL shown after deployment. The extension opens that URL from a report, but it does not copy the captured text into the site.
 7. Open a webpage with contract terms and click the extension. Choose **Use selected text** or **Read page text**, review/edit the text, acknowledge the send notice, and select **Review this text**. You can also paste text directly.
 
-The Quick Check shows the first eight findings. Use the locally running website at `http://localhost:5173` for longer documents, file/OCR extraction, and the complete downloadable report. The public GitHub Pages site is text-only.
+The Quick Check shows the first eight findings. Use the website for longer documents, PDF/photo extraction, text correction, and the complete downloadable report. The public GitHub Pages site performs extraction and OCR in the browser; it does not send contract files to an Anugya Satyapak server.
 
 ## Privacy and permissions
 

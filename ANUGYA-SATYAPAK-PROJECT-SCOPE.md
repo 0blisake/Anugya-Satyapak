@@ -4,9 +4,9 @@ This checklist maps the provided problem statement, solution outline, and final 
 
 | Requirement | Project implementation | Current state |
 |---|---|---|
-| Upload PDF, photo, or text | File picker, drag/drop, pasted text, and a separate extraction preview; up to 10 ordered screenshots | Implemented in Phase 1; OCR requires Tesseract and English language data on the API host |
-| Correct OCR text before review | Editable extracted-text preview with page markers and extraction warnings | Implemented in Phase 1; one combined editor rather than per-page editors |
-| Diagnose photo API readiness | API health includes OCR runtime/language readiness and upload limits | Implemented in Phase 1; deployment host limits still need a live-host check |
+| Upload PDF, photo, or text | File picker, drag/drop, pasted text, and a separate extraction preview; up to 10 ordered screenshots | Browser-based extraction; selectable PDF text uses PDF.js, scanned PDF pages and photos use English/Hindi Tesseract.js OCR; PDF OCR is capped at 30 pages |
+| Correct OCR text before review | Editable extracted-text preview with extraction warnings | Implemented; one combined editor rather than per-page editors |
+| Keep public contract files client-side | Static GitHub Pages build extracts and scans files in the browser | Implemented; OCR engine and language data are downloaded from public CDNs on first OCR use; contract content is not uploaded |
 | Short bullet summary | Summary area with count and first three findings | Implemented for sample and scan results |
 | Readable, welcoming branded interface | Paper texture, green-led palette, ribbon details, larger report typography, responsive layout, and supplied logo in the header/footer | Implemented in Phase 3; TypeScript/build pass; refreshed browser/device visual review remains pending |
 | Quick browser extension | Desktop Chrome Manifest V3 toolbar popup that reads selected or rendered page text, lets the user correct it, and submits to the shared analysis API | Implemented in Phase 4; JavaScript and manifest checks pass; Chrome install and live API flow remain unverified in this environment |
@@ -36,7 +36,8 @@ This checklist maps the provided problem statement, solution outline, and final 
 - No finding does not mean that no important clause or applicable law exists.
 - AI findings are candidate review items; the API checks exact supporting quotes and attaches citations only from its narrow, manually curated source list.
 - The current source list and model output still require legal and quality review before a public-use claim.
-- AI mode sends the corrected contract text to the backend and OpenAI after an explicit user acknowledgement. Provider and hosting terms still apply.
+- The public site processes uploaded files, extracted text, and pasted text in the browser. First-time OCR downloads only the OCR engine and language assets from public CDNs.
+- Local AI mode sends corrected contract text to the local backend and OpenAI after an explicit user acknowledgement. Provider and hosting terms still apply.
 - OCR text can be inaccurate; the report warns users to compare OCR quotations with the source image.
 - The sample contract and sample findings are fictional and illustrative.
 
