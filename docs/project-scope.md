@@ -8,7 +8,7 @@ This checklist maps the provided problem statement, solution outline, and final 
 | Correct OCR text before review | Editable extracted-text preview with extraction warnings | Implemented; one combined editor rather than per-page editors |
 | Keep public contract files client-side | Static GitHub Pages build extracts and scans files in the browser | Implemented; OCR engine and language data are downloaded from public CDNs on first OCR use; contract content is not uploaded |
 | Short bullet summary | Summary area with count and first three findings | Implemented for sample and scan results |
-| Readable, welcoming branded interface | Paper texture, green-led palette, ribbon details, larger report typography, responsive layout, and supplied logo in the header/footer | Implemented in Phase 3; TypeScript/build pass; refreshed browser/device visual review remains pending |
+| Readable, welcoming branded interface | Paper texture, green-led palette, ribbon details, larger report typography, responsive layout, and supplied logo in the header/footer | Implemented in Phase 3; TypeScript check passes; current Vite build attempt was blocked by an environment-level `spawn EPERM`; refreshed browser/device visual review remains pending |
 | Quick browser extension | Desktop Chrome Manifest V3 popup that preloads selected text, optionally reads visible page text, and runs a compact local pattern scan | Implemented in Phase 4; no backend/API setup or text upload is required; live Chrome interaction remains for owner verification |
 | Detailed contract review | Finding cards with exact evidence, plain-language explanation, next step, uncertainty, and a concise summary | Implemented in Phase 2 behind OpenAI configuration; rules scan remains the unconfigured fallback; dynamic quality review pending |
 | Broad review checklist | Eight categories reviewed per document chunk, followed by an independent omission pass | Implemented in Phase 2; model recall and false positives still need evaluation |
@@ -44,6 +44,6 @@ This checklist maps the provided problem statement, solution outline, and final 
 ## Phase implementation records
 
 - Phase 1 intake and extraction are mapped in the requirements table above; the original standalone Phase 1 note is not included in this repository.
-- Phase 2 AI analysis: [pipeline implementation, roadmap cross-check, setup, and open verification items](ANUGYA-SATYAPAK-PHASE-2-AI-PIPELINE.md).
-- Phase 3 website presentation: [palette, typography, responsive styling, and brand asset folder](ANUGYA-SATYAPAK-PHASE-3-VISUAL-DESIGN.md).
-- Phase 4 browser extension: [capture flow, permission model, setup, and verification checklist](ANUGYA-SATYAPAK-PHASE-4-EXTENSION.md).
+- Phase 2 AI analysis: [pipeline implementation, roadmap cross-check, setup, and open verification items](ai-pipeline.md).
+- Phase 3 website presentation: [palette, typography, responsive styling, and brand asset folder](visual-design.md).
+- Phase 4 browser extension: [capture flow, permission model, setup, and verification checklist](extension.md).

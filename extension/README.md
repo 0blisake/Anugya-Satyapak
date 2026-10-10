@@ -8,7 +8,7 @@ The full website remains the place for PDFs, photos, text correction, and the lo
 
 1. On each laptop that will run the showcase, download or clone this repository and unzip it if needed. If the team shares the standalone extension ZIP, extract it first; the extracted package folder directly contains `manifest.json`. No backend or npm command is required to use the extension.
 2. In desktop Chrome, open `chrome://extensions` and turn on **Developer mode**.
-3. Select **Load unpacked** and choose the repository's `extension/` folder. Choose the folder that directly contains `manifest.json`.
+3. Select **Load unpacked** and choose the folder that directly contains `manifest.json`: the repository's `extension/` folder, or the extracted standalone package folder.
 4. Pin **Anugya Satyapak — Quick Check** from Chrome's Extensions menu if you want it beside the address bar.
 5. On a webpage, select a clause and click the extension. The selected text is preloaded when the browser permits it. Otherwise, paste text or choose **Read visible page**.
 6. Check and edit the captured text, then select **Run local quick check**. The compact report appears in the popup.
@@ -45,4 +45,3 @@ The quick scan is intentionally self-contained and does not provide the website'
 - `popup.html`, `popup.css`, `popup.js` — capture, local quick scan, and compact report interface.
 - `local-scan.js` — browser-local English pattern checks used by the popup.
 - `icons/` — Chrome-compatible PNG sizes plus the SVG source.
-- `store-assets/` — retained draft artwork; not used by the laptop showcase.

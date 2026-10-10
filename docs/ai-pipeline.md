@@ -1,7 +1,7 @@
 # Anugya Satyapak — Phase 2: AI review pipeline
 
 **Status:** Implementation is in place for owner review. Live provider behavior and review quality are not yet verified.
-**Product target:** Website full-review flow, with a stable analysis API that can later be shared by the browser extension.
+**Product target:** Optional AI-assisted full review in the locally run website. The current browser extension is a separate local-only quick check and does not use this API.
 **Provider choice for this prototype:** OpenAI Responses API, isolated behind a small provider interface. No API key was supplied or used while making these changes.
 
 ## 1. Phase objective
@@ -89,12 +89,12 @@ AI use can incur provider charges. Each document uses up to two model requests p
 ## 5. Explicitly unverified and deferred
 
 - No API key was available; no real provider call, live report, or account billing behavior was checked.
-- No test suite or production build was run. The code and UI changes were inspected statically only.
+- No automated test suite or live provider call was run. In the 2026-10-10 project audit, the TypeScript check passed; the Vite production build could not complete because this environment denied a child-process spawn (`EPERM`).
 - The synthetic evaluation set has not been executed against any model. False positive rate, recall, latency, and consistency are unknown. The Phase 0 90% target remains an evaluation target, not a result.
 - Hindi generation has not been manually reviewed. The model is asked for the selected language, but quality is not established.
 - The source seed needs legal review and does not cover all Indian consumer law, state amendments, or every relevant section.
 - No authentication, rate limiting, spending ceiling, asynchronous job/progress UI, contract persistence, or production privacy review was added in this phase.
-- The website typography/palette/logo-folder work and the browser extension remain later phases. Phase 3 has not started.
+- The website visual refresh and browser extension are recorded in [`visual-design.md`](visual-design.md) and [`extension.md`](extension.md); their remaining browser review items are listed in those records.
 
 ## 6. Changed project files
 
@@ -103,6 +103,6 @@ AI use can incur provider charges. Each document uses up to two model requests p
 - `backend/requirements.txt` and `backend/.env.example` — environment configuration support.
 - `backend/examples/phase2_evaluation.json` — synthetic evaluation starter set.
 - `frontend/src/App.tsx`, `frontend/src/types.ts`, and `frontend/src/styles.css` — mode status, consent, evidence-clarity display, uncertainty, and warnings.
-- `README.md` and `ANUGYA-SATYAPAK-PROJECT-SCOPE.md` — setup and implementation status.
+- `../README.md` and `project-scope.md` — setup and implementation status.
 
-**Phase 2 outcome:** The AI review path is implemented behind backend configuration, with evidence gates, a cautious rules fallback, and explicit consent. It is ready for a code owner review and later key-enabled manual evaluation; it is not yet verified for live AI quality. Phase 3 should begin only after owner approval.
+**Phase 2 outcome:** The AI review path is implemented behind backend configuration, with evidence gates, a cautious rules fallback, and explicit consent. It is ready for a code owner review and later key-enabled manual evaluation; it is not yet verified for live AI quality.

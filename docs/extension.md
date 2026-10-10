@@ -1,6 +1,6 @@
 # Anugya Satyapak — Phase 4: browser extension
 
-**Status:** The extension is a local-first quick check intended for a laptop showcase by the project team. Its design follows the website's paper texture, forest-green palette, and ribbon details. It is loaded unpacked in desktop Chrome; no Chrome Web Store publication or developer registration is planned. No changes have been committed.
+**Status:** The extension is a local-first quick check intended for a laptop showcase by the project team. Its design follows the website's paper texture, forest-green palette, and ribbon details. It is loaded unpacked in desktop Chrome; no Chrome Web Store publication or developer registration is planned.
 
 ## 1. Product role
 
@@ -63,4 +63,4 @@ There are no persistent page-host permissions, API-host permissions, options pag
 
 After changing the code, use **Reload** for this extension on `chrome://extensions`. If Chrome continues showing the previous options/API flow, remove the previous unpacked entry and load this `extension/` folder again.
 
-**Phase 4 outcome:** The extension follows the local-first quick-check role and shares the site's visual design language. It is for a presenter-installed laptop showcase, not global Store distribution. Load it through Chrome's **Developer mode → Load unpacked** flow using the folder containing `manifest.json`. The site links to those setup instructions. These changes are in the working tree only and are not committed.
+**Phase 4 outcome:** The extension follows the local-first quick-check role and shares the site's visual design language. It is for a presenter-installed laptop showcase, not global Store distribution. Load it through Chrome's **Developer mode → Load unpacked** flow using the folder containing `manifest.json`. The site links to those setup instructions.

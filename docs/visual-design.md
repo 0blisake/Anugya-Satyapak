@@ -1,6 +1,6 @@
 # Anugya Satyapak — Phase 3: visual design and brand assets
 
-**Status:** The paper-and-green visual refresh and supplied brand mark are implemented. TypeScript and the production frontend build pass. The refreshed page still needs a browser-based visual review at desktop and mobile widths.
+**Status:** The paper-and-green visual refresh and supplied brand mark are implemented. The TypeScript check passed in the 2026-10-10 audit. The Vite production build could not complete in this environment because its config bundler was denied a child-process spawn (`EPERM`). The refreshed page still needs a browser-based visual review at desktop and mobile widths.
 
 ## Design direction
 
@@ -35,7 +35,7 @@ The approved mark lives at `frontend/public/brand/logo-mark.svg`. The website us
 | Make the interface welcoming and distinct | Paper texture, dark-green hero/navigation, ribbon details, and paper-like cards | Implemented; visual review at desktop and phone widths remains pending |
 | Use the original palette with green more prominent | Forest and leaf greens lead; cream is the paper canvas; blue and lime remain accents | Implemented |
 | Improve readability | Larger text hierarchy and stronger contrast for report content and controls | Implemented; check on target devices before a public-use claim |
-| Preserve current functionality | No changes to upload, extraction, consent, API, report, or download behavior | Preserved; frontend type/build checks pass |
+| Preserve current functionality | No changes to upload, extraction, consent, API, report, or download behavior | TypeScript check passes; production build remains unconfirmed in this environment due to the spawn restriction |
 | Provide a place for the brand mark | `frontend/public/brand/` contains the SVG used by the header and footer | Implemented |
 | Keep a responsive layout | Existing responsive layouts remain, with refreshed colors and surfaces | Code is present; visual viewport walkthrough remains pending |
 
@@ -46,7 +46,7 @@ The approved mark lives at `frontend/public/brand/logo-mark.svg`. The website us
 - `frontend/index.html` — brand favicon and browser theme color.
 - `frontend/public/brand/logo-mark.svg` — supplied vector mark used by the website.
 - `frontend/public/brand/README.md` — logo placement and replacement instructions.
-- `README.md` and `ANUGYA-SATYAPAK-PROJECT-SCOPE.md` — public project description and current status.
+- `../README.md` and `project-scope.md` — public project description and current status.
 
 ## Verification and open checks
 
